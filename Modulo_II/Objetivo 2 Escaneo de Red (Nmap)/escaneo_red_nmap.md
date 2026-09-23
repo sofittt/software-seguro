@@ -71,11 +71,7 @@ Por lo tanto, el objetivo utilizado para esta práctica fue:
 
 **Host:** `github.com`
 
-### Captura del Scope
 
-A continuación se adjunta una captura donde puede observarse que `github.com` se encuentra incluido dentro del alcance del programa.
-
-![Scope del programa GitHub Bug Bounty](./scope_github.png)
 
 ---
 

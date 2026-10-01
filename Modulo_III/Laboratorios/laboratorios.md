@@ -181,3 +181,337 @@ Después de las primeras pruebas se logró reducir la búsqueda al rango compren
 Finalmente, se analizaron automáticamente las respuestas utilizando una expresión regular para buscar un número de 16 dígitos. De esta manera se encontró el código `5524663362514956`, se calculó su correspondiente MD5 y se utilizó para completar correctamente el laboratorio.
 
 Con este ejercicio se pusieron en práctica conceptos relacionados con **peticiones HTTP, códigos de estado, automatización con Python, hashes MD5, concurrencia y expresiones regulares**.
+
+
+# Laboratorio – El Mejor Secreto
+
+## Enunciado
+
+El objetivo del laboratorio consiste en encontrar la contraseña de un archivo ZIP protegido.
+
+Como pista se cuenta con una secuencia de pulsaciones realizadas sobre cinco símbolos diferentes. A partir de la observación del patrón se identificó la siguiente secuencia de **12 pulsaciones**:
+
+```text
+ABCCDADDDDEC
+```
+
+Donde cada letra representa un símbolo:
+
+- **A:** Carita
+- **B:** Círculo
+- **C:** Triángulo
+- **D:** Corazón
+- **E:** Flor
+
+El problema es que se conoce el orden en el que fueron pulsados los símbolos, pero no qué número del `0` al `9` representa cada uno.
+
+---
+
+## Análisis
+
+Primero se identificó el patrón de pulsaciones:
+
+```text
+ABCCDADDDDEC
+```
+
+El patrón contiene cinco símbolos diferentes:
+
+```text
+A, B, C, D, E
+```
+
+Se tomó como hipótesis que cada símbolo representa un número diferente entre `0` y `9`.
+
+Por ejemplo, una posible combinación podría ser:
+
+```text
+A = 1
+B = 2
+C = 3
+D = 4
+E = 5
+```
+
+Con esa combinación, el patrón:
+
+```text
+ABCCDADDDDEC
+```
+
+se convertiría en:
+
+```text
+123341444453
+```
+
+Como no se conoce qué número corresponde a cada símbolo, se decidió automatizar la prueba de todas las combinaciones posibles utilizando Python.
+
+Al tener cinco símbolos y diez números disponibles, sin repetir el mismo número para símbolos diferentes, existen:
+
+```text
+10 × 9 × 8 × 7 × 6 = 30.240 combinaciones
+```
+
+---
+
+## Procedimiento
+
+### 1. Identificación del patrón
+
+A partir de las pulsaciones observadas se obtuvo el siguiente patrón:
+
+```text
+ABCCDADDDDEC
+```
+
+Este patrón se definió directamente en el script:
+
+```python
+PATRON = "ABCCDADDDDEC"
+```
+
+También se definieron los posibles números:
+
+```python
+DIGITOS = "0123456789"
+```
+
+---
+
+### 2. Generación de combinaciones
+
+Para generar las diferentes asignaciones posibles entre las figuras y los números se utilizó `itertools.permutations()`.
+
+```python
+for permutacion in itertools.permutations(
+    DIGITOS,
+    len(simbolos)
+):
+```
+
+En cada vuelta del ciclo se genera una correspondencia diferente.
+
+Por ejemplo:
+
+```text
+A = 5
+B = 4
+C = 7
+D = 9
+E = 3
+```
+
+Después se reemplaza cada letra del patrón por el número correspondiente:
+
+```python
+password = "".join(
+    mapa[letra]
+    for letra in PATRON
+)
+```
+
+De esta manera, cada combinación genera automáticamente una contraseña de 12 dígitos.
+
+---
+
+### 3. Prueba de la contraseña
+
+Para comprobar si cada contraseña generada era correcta se utilizó **7-Zip** desde Python.
+
+El script ejecuta el siguiente comando mediante `subprocess`:
+
+```python
+resultado = subprocess.run(
+    [
+        SEVEN_ZIP,
+        "t",
+        ZIP,
+        f"-p{password}",
+        "-y"
+    ],
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL
+)
+```
+
+La opción `t` de 7-Zip permite probar el archivo sin necesidad de extraerlo.
+
+Si la contraseña es incorrecta, el programa continúa automáticamente con la siguiente combinación.
+
+Si el resultado de 7-Zip es:
+
+```python
+resultado.returncode == 0
+```
+
+significa que el archivo pudo ser comprobado correctamente y, por lo tanto, se encontró la contraseña.
+
+---
+
+### 4. Seguimiento del proceso
+
+También se agregó información en pantalla para poder controlar el avance de la búsqueda.
+
+Durante la ejecución se obtuvo, por ejemplo:
+
+```text
+⏳ 16,700/30,240 (55.2%) | ⚡ 17.8 claves/s | Última: 547765666617
+```
+
+Esto permite visualizar:
+
+- Cantidad de claves probadas.
+- Total de combinaciones posibles.
+- Porcentaje completado.
+- Velocidad de prueba.
+- Última contraseña analizada.
+
+---
+
+## Código utilizado
+
+```python
+import itertools
+import subprocess
+import time
+import os
+
+ZIP = r"C:\Users\sofialourdes_toledoc\Downloads\secreto.zip"
+SEVEN_ZIP = r"C:\Program Files\7-Zip\7z.exe"
+
+PATRON = "ABCCDADDDDEC"
+DIGITOS = "0123456789"
+
+if not os.path.exists(ZIP):
+    print("No se encontró el ZIP")
+    exit()
+
+if not os.path.exists(SEVEN_ZIP):
+    print("No se encontró 7-Zip")
+    exit()
+
+simbolos = sorted(set(PATRON))
+
+inicio = time.time()
+probadas = 0
+
+for permutacion in itertools.permutations(
+    DIGITOS,
+    len(simbolos)
+):
+
+    mapa = dict(zip(simbolos, permutacion))
+
+    password = "".join(
+        mapa[letra]
+        for letra in PATRON
+    )
+
+    probadas += 1
+
+    resultado = subprocess.run(
+        [
+            SEVEN_ZIP,
+            "t",
+            ZIP,
+            f"-p{password}",
+            "-y"
+        ],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+
+    if resultado.returncode == 0:
+
+        print("¡Contraseña encontrada!")
+        print("Password:", password)
+        print("Correspondencia:", mapa)
+
+        break
+
+tiempo_total = time.time() - inicio
+
+print("Claves probadas:", probadas)
+print("Tiempo:", tiempo_total / 60, "minutos")
+```
+
+---
+
+## Resultado
+
+Luego de ejecutar el script se obtuvo:
+
+```text
+==================================================
+🎯 ¡CONTRASEÑA ENCONTRADA!
+==================================================
+
+🔑 Password: 547795999937
+
+🔢 Correspondencia:
+carita (A) = 5
+círculo (B) = 4
+triángulo (C) = 7
+corazón (D) = 9
+flor (E) = 3
+```
+
+Por lo tanto, la correspondencia correcta fue:
+
+| Letra | Símbolo | Número |
+|---|---|---:|
+| A | Carita | 5 |
+| B | Círculo | 4 |
+| C | Triángulo | 7 |
+| D | Corazón | 9 |
+| E | Flor | 3 |
+
+Aplicando estos valores al patrón original:
+
+```text
+A B C C D A D D D D E C
+5 4 7 7 9 5 9 9 9 9 3 7
+```
+
+se obtiene finalmente la contraseña:
+
+```text
+547795999937
+```
+
+---
+
+## Estadísticas
+
+La ejecución final arrojó los siguientes resultados:
+
+```text
+Claves probadas: 16.714
+Tiempo: 941.23 segundos
+Tiempo: 15.69 minutos
+```
+
+De un máximo de **30.240 combinaciones**, fue necesario probar **16.714** hasta encontrar la correcta.
+
+---
+
+## Conclusión
+
+Para resolver el ejercicio primero se identificó el patrón de las 12 pulsaciones:
+
+```text
+ABCCDADDDDEC
+```
+
+Luego se desarrolló un script en Python que genera las posibles correspondencias entre las cinco figuras y los números del `0` al `9`.
+
+Cada contraseña generada se prueba automáticamente contra el archivo ZIP utilizando 7-Zip, evitando tener que realizar las pruebas manualmente.
+
+Finalmente, después de **16.714 intentos** y aproximadamente **15,69 minutos**, se encontró la contraseña correcta:
+
+```text
+547795999937
+```
+
+La resolución del laboratorio permitió aplicar generación de permutaciones, automatización mediante Python y ejecución de comandos externos para reducir un problema de prueba manual a un proceso automatizado.

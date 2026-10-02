@@ -517,7 +517,7 @@ Finalmente, después de **16.714 intentos** y aproximadamente **15,69 minutos**,
 La resolución del laboratorio permitió aplicar generación de permutaciones, automatización mediante Python y ejecución de comandos externos para reducir un problema de prueba manual a un proceso automatizado.
 
 
-# Laboratorio – Broker Control Access
+# Laboratorio – Broker Control Access Votación UTN vs Harvard
 
 ## Objetivo
 
@@ -653,7 +653,7 @@ Para resolver el laboratorio realicé los siguientes pasos:
 
 Este laboratorio permitió observar la importancia de realizar las validaciones y controles de acceso del lado del servidor y no depender únicamente de parámetros enviados por el cliente o de controles que puedan ser modificados durante una petición HTTP.
 
-# Laboratorio – Broker Control Access / Votación UTN vs Harvard
+# Laboratorio – Broker Control Access / Votación Mejorada  UTN vs Harvard
 
 ## Objetivo
 

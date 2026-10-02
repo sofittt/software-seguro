@@ -515,3 +515,237 @@ Finalmente, después de **16.714 intentos** y aproximadamente **15,69 minutos**,
 ```
 
 La resolución del laboratorio permitió aplicar generación de permutaciones, automatización mediante Python y ejecución de comandos externos para reducir un problema de prueba manual a un proceso automatizado.
+
+
+# Laboratorio – Broker Control Access
+
+## Objetivo
+
+El objetivo del laboratorio consistía en analizar el funcionamiento de un sistema de votación entre **UTN** y **Harvard** y lograr que UTN superara la cantidad de votos de Harvard.
+
+---
+
+## 1. Análisis inicial
+
+Primero ingresé al sitio y analicé las solicitudes que realizaba la aplicación al momento de emitir un voto.
+
+Utilizando las herramientas del navegador y **Burp Suite**, identifiqué la petición utilizada por el sistema para registrar los votos.
+
+La petición recibía un parámetro llamado `op`.
+
+Realicé diferentes pruebas utilizando **Edit and Resend / Repeater**, modificando este parámetro para determinar qué valor correspondía a cada universidad.
+
+Se comprobó que:
+
+- `op=0` → agregaba un voto a **Harvard**.
+- `op=1` → agregaba un voto a **UTN**.
+
+---
+
+## 2. Análisis de la respuesta
+
+La respuesta del servidor devolvía un JSON con el estado actualizado de la votación.
+
+Por ejemplo:
+
+    {
+      "progressbar_utn": "...",
+      "progressbar_harvard": "..."
+    }
+
+Dentro de estos valores se podía observar tanto el porcentaje como la cantidad actual de votos de cada universidad.
+
+Al enviar nuevamente una petición utilizando:
+
+    op=1
+
+se observó que el contador correspondiente a UTN aumentaba.
+
+De esta manera confirmé que `op=1` era la operación que debía utilizar para incrementar los votos de UTN.
+
+---
+
+## 3. Pruebas con cookies
+
+Durante el análisis también revisé las **cookies** utilizadas por la aplicación, ya que inicialmente consideré que el sistema podía estar controlando mediante una cookie si un usuario ya había votado.
+
+En las respuestas del servidor se podía observar una cookie llamada:
+
+    voto
+
+Por ejemplo, el servidor enviaba una cabecera similar a:
+
+    Set-Cookie: voto=...; Max-Age=3600; path=/
+
+Realicé diferentes pruebas modificando y reenviando las solicitudes para comprobar qué relación tenía esta cookie con el funcionamiento de la votación.
+
+El objetivo de estas pruebas era determinar si el servidor utilizaba la cookie `voto` como mecanismo para impedir que un mismo usuario emitiera múltiples votos.
+
+Sin embargo, al continuar realizando solicitudes y observando los contadores devueltos por el servidor, comprobé que era posible seguir incrementando la cantidad de votos mediante nuevas peticiones.
+
+Esto permitió detectar que el control existente no impedía de manera efectiva la repetición de la operación desde las solicitudes HTTP.
+
+---
+
+## 4. Automatización
+
+Una vez identificado que:
+
+    op=1 → UTN
+
+y comprobado que era posible repetir la operación, realizar todas las solicitudes manualmente no era práctico debido a la diferencia inicial de votos.
+
+Por este motivo automaticé el envío de las peticiones que utilizaban `op=1`, reproduciendo la misma solicitud que previamente había probado manualmente.
+
+El objetivo era continuar realizando la operación hasta conseguir que:
+
+    votos_UTN > votos_Harvard
+
+Durante la ejecución fui verificando las respuestas del servidor para controlar el progreso de la votación.
+
+---
+
+## 5. Resultado
+
+Finalmente, el servidor devolvió:
+
+    UTN:     3534 votos
+    Harvard: 3521 votos
+
+Los porcentajes informados fueron:
+
+    UTN:     50.0921 %
+    Harvard: 49.9079 %
+
+Por lo tanto:
+
+    3534 > 3521
+
+UTN consiguió superar a Harvard por **13 votos**, cumpliendo la condición planteada por el laboratorio.
+
+La petición final respondió:
+
+    HTTP/2 200 OK
+
+También apareció el siguiente warning generado por el backend:
+
+    Warning: Use of undefined constant ID_DESAFIO
+    /var/www/html/src/ctl/votacion.ctl.php on line 27
+
+Este mensaje corresponde a una advertencia generada por PHP en el servidor y no impidió que la respuesta devolviera correctamente los valores de la votación.
+
+---
+
+## Conclusión
+
+Para resolver el laboratorio realicé los siguientes pasos:
+
+1. Analicé las solicitudes HTTP realizadas por la aplicación.
+2. Identifiqué el parámetro `op`.
+3. Probé diferentes valores mediante Edit and Resend / Repeater.
+4. Determiné que `op=1` correspondía a UTN y `op=0` a Harvard.
+5. Analicé la cookie `voto` utilizada por la aplicación.
+6. Realicé pruebas para determinar si la cookie impedía realizar múltiples votos.
+7. Comprobé que era posible repetir la operación y continuar incrementando el contador.
+8. Automaticé las solicitudes correspondientes a UTN.
+9. Controlé los valores devueltos por el servidor.
+10. Finalicé cuando UTN alcanzó **3534 votos**, superando los **3521 votos** de Harvard.
+
+Este laboratorio permitió observar la importancia de realizar las validaciones y controles de acceso del lado del servidor y no depender únicamente de parámetros enviados por el cliente o de controles que puedan ser modificados durante una petición HTTP.
+
+# Laboratorio – Broker Control Access / Votación UTN vs Harvard
+
+## Objetivo
+
+El objetivo del laboratorio consistía en analizar el funcionamiento del sistema de votación y encontrar una forma de realizar múltiples votos para **UTN**, identificando qué control utilizaba la aplicación para limitar las votaciones.
+
+---
+
+## 1. Análisis inicial
+
+Primero ingresé a la aplicación y realicé una votación manual mientras analizaba las peticiones HTTP utilizando **Burp Suite**.
+
+Al interceptar el tráfico identifiqué que la votación se realizaba mediante una petición:
+
+POST /src/ctl/votacion.ctl.php
+
+El parámetro enviado en el body era:
+
+
+opUniversidad=1
+
+Al realizar pruebas se comprobó que:
+- opUniversidad=1 correspondía a un voto para UTN.
+- El otro valor correspondía a la universidad contraria.
+De esta manera pude identificar cuál era el parámetro que debía enviarse para incrementar los votos de UTN.
+
+## 2. Identificación del control de votación
+Luego de realizar distintas pruebas observé que la aplicación impedía votar repetidamente desde un mismo origen.
+Analizando la petición se identificó la posibilidad de enviar el encabezado:
+
+X-Forwarded-For: IP
+
+X-Forwarded-For es un encabezado HTTP utilizado normalmente por proxies y balanceadores para informar la dirección IP original del cliente.
+En este laboratorio, el servidor confiaba en el valor recibido mediante este encabezado para identificar el origen de la petición.
+Esto permitía probar si modificando el valor de X-Forwarded-For el servidor consideraba cada petición como proveniente de una IP diferente.
+
+## 3. Generación de IPs
+Para no modificar manualmente la IP en cada petición, generé una lista de direcciones IP dentro del siguiente rango:
+1.2.3.4
+1.2.3.5
+1.2.3.6
+...
+1.2.3.200
+
+En total se utilizaron 197 direcciones IP diferentes.
+Las IPs fueron guardadas en un archivo .txt, colocando una dirección por línea.
+
+## 4. Automatización con Burp Suite Intruder
+Una vez identificado el comportamiento, envié la petición HTTP a Burp Suite Intruder.
+La petición utilizada tenía la siguiente estructura relevante:
+
+POST /src/ctl/votacion.ctl.php HTTP/2
+
+X-Forwarded-For: IP
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+
+opUniversidad=1
+
+En Intruder configuré como posición de payload únicamente el valor correspondiente a la IP:
+X-Forwarded-For: §IP§
+
+Luego cargué como payload el archivo .txt generado anteriormente con las 197 IPs.
+De esta manera Burp reemplazó automáticamente el valor de X-Forwarded-For en cada petición:
+
+X-Forwarded-For: 1.2.3.4
+X-Forwarded-For: 1.2.3.5
+X-Forwarded-For: 1.2.3.6
+...
+X-Forwarded-For: 1.2.3.200
+
+Mientras que el body permaneció siempre:
+opUniversidad=1
+Finalmente ejecuté el ataque desde Intruder y las peticiones fueron procesadas correctamente.
+
+## 5. Vulnerabilidad identificada
+El problema se encontraba en la forma en que la aplicación controlaba el origen de los votos.
+El servidor confiaba en el encabezado HTTP:
+
+X-Forwarded-For
+
+para determinar la IP del usuario.
+Sin embargo, este encabezado podía ser modificado directamente desde el cliente utilizando una herramienta como Burp Suite.
+Por lo tanto, al enviar un valor diferente en cada petición, fue posible evadir el control basado en IP y realizar múltiples votaciones.
+Esto demuestra que no es seguro utilizar únicamente un encabezado HTTP controlable por el cliente como mecanismo para evitar acciones repetidas.
+
+## 6. Posibles medidas de protección
+Para evitar este tipo de problema, la aplicación debería utilizar controles adicionales del lado del servidor, por ejemplo:
+- No confiar directamente en valores de X-Forwarded-For enviados por el cliente.
+- Aceptar dicho encabezado únicamente cuando provenga de proxies o balanceadores de confianza.
+- Asociar la votación a una sesión o usuario autenticado.
+- Implementar controles de rate limiting.
+- Registrar y detectar comportamientos anómalos o grandes cantidades de votos consecutivos.
+Conclusión
+Mediante el análisis de las peticiones HTTP con Burp Suite se identificó que opUniversidad=1 permitía votar por UTN y que el sistema utilizaba información relacionada con la IP para controlar las votaciones.
+Al modificar el encabezado X-Forwarded-For y automatizar diferentes valores mediante Burp Suite Intruder, fue posible comprobar que el control podía ser evadido.
+El ejercicio permitió comprender de manera práctica los riesgos de confiar en información proporcionada por el cliente para implementar controles de acceso o restricciones de uso.

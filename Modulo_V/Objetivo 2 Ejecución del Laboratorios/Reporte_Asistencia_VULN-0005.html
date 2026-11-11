@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte VULN-0005 — Asistencia</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    color: #1f2933;
+    font-size: 11px;
+    line-height: 1.5;
+    margin: 0;
+  }
+  h1 { font-size: 22px; color: #0b3d63; margin: 0 0 2px; }
+  h2 {
+    font-size: 15px; color: #0b3d63;
+    border-bottom: 2px solid #0b3d63;
+    padding-bottom: 3px; margin: 22px 0 10px;
+  }
+  h3 { font-size: 12.5px; color: #15557f; margin: 14px 0 6px; }
+  p { margin: 6px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+  th, td { border: 1px solid #c3ccd6; padding: 5px 8px; text-align: left; vertical-align: top; }
+  th { background: #eef3f8; color: #0b3d63; font-weight: 600; }
+  code, pre { font-family: "Consolas", monospace; }
+  code { background: #f2f4f7; padding: 1px 4px; border-radius: 3px; font-size: 10px; }
+  pre {
+    background: #0f1b2b; color: #e6edf3; padding: 10px 12px;
+    border-radius: 5px; font-size: 9.5px; line-height: 1.45;
+    white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;
+  }
+  .cover { border: 1px solid #c3ccd6; border-radius: 6px; padding: 16px 18px; background: #f8fafc; }
+  .sub { color: #52606d; font-size: 11px; }
+  .badge {
+    display: inline-block; padding: 2px 9px; border-radius: 10px;
+    font-weight: 700; font-size: 11px; color: #fff; background: #d08700;
+  }
+  .meta-grid { width: 100%; margin-top: 10px; }
+  .note { background: #fff8e6; border-left: 4px solid #d08700; padding: 8px 12px; margin: 10px 0; font-size: 10.5px; }
+  .ok { color: #0a7d3c; font-weight: 600; }
+  .bad { color: #b42318; font-weight: 600; }
+  ul { margin: 6px 0 6px 18px; padding: 0; }
+  li { margin: 3px 0; }
+  .small { font-size: 10px; color: #52606d; }
+  footer { margin-top: 24px; border-top: 1px solid #c3ccd6; padding-top: 8px; font-size: 9px; color: #7b8794; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>Reporte técnico de vulnerabilidad</h1>
+  <div class="sub">Curso <strong>Software Seguro</strong> · Módulo V — Laboratorios prácticos · Documento confidencial (uso autorizado)</div>
+  <table class="meta-grid">
+    <tr><th style="width:32%">ID del hallazgo</th><td>VULN-0005</td></tr>
+    <tr><th>Título</th><td>Enumeración de códigos válidos mediante canal lateral de temporización (divulgación de información)</td></tr>
+    <tr><th>Laboratorio / activo</th><td>Asistencia — entorno de práctica autorizado del curso</td></tr>
+    <tr><th>URL / endpoint</th><td><code>POST https://chl-&lt;id&gt;-asistencia.softwareseguro.com.ar/index.php</code></td></tr>
+    <tr><th>Severidad</th><td><span class="badge">MEDIA — CVSS v3.1: 5.3</span></td></tr>
+    <tr><th>Clasificación</th><td>CWE-208 / CWE-203 / CWE-200 · OWASP A05:2021 Security Misconfiguration</td></tr>
+    <tr><th>Fecha de detección</th><td>2026-11-11</td></tr>
+    <tr><th>Autor/a</th><td>Sofía Lourdes Toledo Criado</td></tr>
+    <tr><th>Estado</th><td>Resuelto en laboratorio · remediación recomendada</td></tr>
+  </table>
+</div>
+
+<h2>1. Identificación y trazabilidad</h2>
+<table>
+  <tr><th style="width:32%">Campo</th><th>Valor</th></tr>
+  <tr><td>ID del hallazgo</td><td>VULN-0005</td></tr>
+  <tr><td>Aplicación / activo</td><td>Formulario "Verificar Código" del laboratorio Asistencia (PHP 8.0.30 tras Cloudflare)</td></tr>
+  <tr><td>URL / endpoint</td><td><code>POST /index.php</code> (cuerpo <code>codigo</code>, <code>clave</code>)</td></tr>
+  <tr><td>Fecha de detección</td><td>2026-11-11</td></tr>
+  <tr><td>Reportado por</td><td>Sofía Lourdes Toledo Criado</td></tr>
+  <tr><td>Estado</td><td>Resuelto en laboratorio; remediación pendiente del lado del servidor</td></tr>
+  <tr><td>Alcance autorizado</td><td>Challenge del curso, clave de prueba inválida, sin acceso a datos reales de terceros</td></tr>
+</table>
+
+<h2>2. Resumen ejecutivo</h2>
+<p><strong>Hallazgo:</strong> el formulario de verificación responde siempre el mismo mensaje ("No se puede acceder a esta información") ante una clave incorrecta, pero <strong>tarda mucho más</strong> cuando el código corresponde a un asistente real. Esa diferencia de tiempo permite distinguir los códigos válidos de los inexistentes <strong>sin conocer la clave</strong> y, contándolos, deducir la cantidad total de asistentes.</p>
+<p><strong>Riesgo para el negocio:</strong> un atacante no autenticado puede enumerar qué identificadores existen y obtener un dato agregado protegido (cantidad de asistentes), además de preparar ataques dirigidos posteriores (p. ej. fuerza bruta de clave solo sobre códigos reales).</p>
+<p><strong>Impacto principal sobre la tríada CIA:</strong> <strong>Confidencialidad</strong>. No se afectan integridad ni disponibilidad.</p>
+<p><strong>Severidad y prioridad:</strong> Media (CVSS v3.1 5.3). Prioridad de corrección media: la falla es fácil de explotar de forma remota y silenciosa, aunque la información expuesta en este laboratorio es acotada.</p>
+<p><strong>Acción recomendada:</strong> uniformar el tiempo de respuesta entre códigos válidos e inexistentes (ejecutar siempre una verificación de clave aunque el código no exista) y aplicar rate limiting.</p>
+
+<h2>3. Detalles técnicos</h2>
+<h3>3.1 Descripción</h3>
+<p>El endpoint <code>POST /index.php</code> recibe <code>codigo</code> (3 dígitos) y <code>clave</code>. Ante una clave incorrecta devuelve un HTML idéntico para todos los códigos, por lo que <strong>el contenido de la respuesta no distingue</strong> códigos válidos de inexistentes. Sin embargo, el servidor solo ejecuta la verificación costosa de la clave (hash/consulta) cuando el código <strong>sí existe</strong>, lo que introduce una demora observable (~1 s) frente a los ~95 ms de un código inexistente. Esta discrepancia temporal es un canal lateral que permite enumerar los códigos válidos.</p>
+
+<h3>3.2 Componentes afectados</h3>
+<ul>
+  <li><strong>Aplicación / versión:</strong> Asistencia, backend PHP/8.0.30, detrás de Cloudflare.</li>
+  <li><strong>Método y ruta HTTP:</strong> <code>POST /index.php</code>.</li>
+  <li><strong>Parámetros involucrados:</strong> <code>codigo</code>, <code>clave</code>.</li>
+  <li><strong>Roles o permisos necesarios:</strong> ninguno (acceso anónimo; no se requiere la clave).</li>
+  <li><strong>Entorno y fecha de prueba:</strong> laboratorio autorizado, 2026-11-11.</li>
+</ul>
+
+<h3>3.3 Clasificación y causa raíz</h3>
+<ul>
+  <li><strong>CWE:</strong> CWE-208 (Observable Timing Discrepancy); relacionadas CWE-203 (Observable Discrepancy) y CWE-200 (Exposure of Sensitive Information).</li>
+  <li><strong>CVE:</strong> No aplica (debilidad de configuración/implementación propia del laboratorio).</li>
+  <li><strong>Referencia OWASP:</strong> A05:2021 — Security Misconfiguration (comportamiento observable que filtra información).</li>
+  <li><strong>Causa raíz probable:</strong> la lógica de verificación hace trabajo distinto según exista o no el código (short-circuit para inexistentes), sin normalizar el tiempo de respuesta.</li>
+</ul>
+
+<h3>3.4 Impacto técnico y alcance</h3>
+<p>Bajo las condiciones verificadas, un atacante remoto y anónimo puede: (1) determinar qué códigos de 3 dígitos corresponden a asistentes reales midiendo el tiempo de respuesta, y (2) contar esos códigos para obtener la cantidad total de asistentes. No se demostró acceso a datos personales ni modificación o borrado de información; el impacto comprobado es de <strong>divulgación de información</strong>.</p>
+
+<h2>4. Métricas CVSS</h2>
+<p><strong>Versión utilizada:</strong> CVSS v3.1.</p>
+<table>
+  <tr><th style="width:32%">Métrica</th><th>Valor / justificación</th></tr>
+  <tr><td>Vector CVSS completo</td><td><code>CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N</code></td></tr>
+  <tr><td>Puntaje base</td><td><strong>5.3</strong></td></tr>
+  <tr><td>Severidad CVSS</td><td><strong>Media</strong> (4.0–6.9)</td></tr>
+  <tr><td>Calculadora / fuente</td><td>FIRST — <code>first.org/cvss/calculator/3.1</code></td></tr>
+  <tr><td>Prioridad interna</td><td>Media: explotación remota y silenciosa, pero información expuesta acotada en este entorno.</td></tr>
+</table>
+<table>
+  <tr><th>Métrica base</th><th>Valor</th><th>Justificación</th></tr>
+  <tr><td>AV — Vector de ataque</td><td>N (Red)</td><td>Se explota vía HTTP sobre Internet.</td></tr>
+  <tr><td>AC — Complejidad</td><td>L (Baja)</td><td>La separación de tiempos (~95 ms vs ~1 s) es neta y reproducible; basta repetir muestras.</td></tr>
+  <tr><td>PR — Privilegios</td><td>N (Ninguno)</td><td>No se requiere la clave ni sesión.</td></tr>
+  <tr><td>UI — Interacción</td><td>N (Ninguna)</td><td>No requiere acción de una víctima.</td></tr>
+  <tr><td>S — Alcance</td><td>U (Sin cambios)</td><td>Impacto dentro del mismo componente.</td></tr>
+  <tr><td>C — Confidencialidad</td><td>L (Baja)</td><td>Se filtra la existencia de códigos y la cantidad de asistentes; no datos personales masivos.</td></tr>
+  <tr><td>I — Integridad</td><td>N (Ninguna)</td><td>No se altera información.</td></tr>
+  <tr><td>A — Disponibilidad</td><td>N (Ninguna)</td><td>No se afecta el servicio.</td></tr>
+</table>
+<p class="small"><strong>Justificación:</strong> el puntaje 5.3 refleja una divulgación de información remota, sin privilegios ni interacción, con impacto limitado a la confidencialidad. Si los códigos válidos habilitaran el acceso a datos sensibles del titular, la métrica C debería reevaluarse al alza.</p>
+
+<h2>5. Prueba de concepto (PoC) — paso a paso</h2>
+<p><strong>Objetivo:</strong> demostrar que el tiempo de respuesta revela los códigos válidos y permite contar los asistentes sin la clave.</p>
+<p><strong>Precondiciones:</strong> entorno de laboratorio autorizado; clave de prueba inválida; cookie de sesión propia (no se incluye en el reporte).</p>
+<p><strong>Herramientas:</strong> navegador + DevTools, Burp Suite (Intruder/Repeater), script propio en Python (medición secuencial de tiempos).</p>
+<ol>
+  <li><strong>Preparación:</strong> capturar en DevTools → Network la petición real <code>POST /index.php</code> con <code>codigo</code> y <code>clave</code>; descartar el ruido de Cloudflare (<code>/cdn-cgi/rum</code>).</li>
+  <li><strong>Solicitud inicial:</strong> enviar <code>codigo=123&amp;clave=xxxx</code> y registrar la respuesta base.</li>
+  <li><strong>Observación del contenido:</strong> comprobar que el HTML es idéntico para distintos códigos (el cuerpo no discrimina).</li>
+  <li><strong>Modificación controlada:</strong> variar solo <code>codigo</code> en el rango completo <code>000</code>–<code>999</code>, con clave fija inválida.</li>
+  <li><strong>Ejecución:</strong> medir el tiempo de respuesta de cada código (Intruder o script secuencial — no concurrente, para no corromper la medición).</li>
+  <li><strong>Verificación:</strong> clasificar por tiempo (≈95 ms = inexistente; ≈1 s = asistente válido) y re-medir los candidatos para descartar jitter de red.</li>
+  <li><strong>Cierre:</strong> contar los códigos válidos confirmados; ese total es la cantidad de asistentes. No se alteró ni persistió ningún dato.</li>
+</ol>
+
+<h3>5.1 Evidencia</h3>
+<p><strong>Solicitud HTTP sanitizada:</strong></p>
+<pre>POST /index.php HTTP/2
+Host: chl-&lt;id&gt;-asistencia.softwareseguro.com.ar
+Content-Type: application/x-www-form-urlencoded
+Cookie: cf_clearance=[REDACTADO]
+
+codigo=123&amp;clave=xxxx</pre>
+
+<p><strong>Respuesta (idéntica para códigos válidos e inexistentes ante clave incorrecta):</strong></p>
+<pre>HTTP/2 200 OK
+Content-Type: text/html; charset=UTF-8
+x-powered-by: PHP/8.0.30
+
+... &lt;div class="note" style="color: red; font-size: 20px"&gt;
+    No se puede acceder a esta información
+&lt;/div&gt; ...</pre>
+
+<p><strong>Señal diferencial — muestra de tiempos de respuesta (columna "Response received"):</strong></p>
+<table>
+  <tr><th>codigo</th><th>Tiempo (mediana)</th><th>Clasificación</th></tr>
+  <tr><td>101, 110, 200, 999 (ejemplos)</td><td>~95 ms</td><td>Inexistente (corte inmediato)</td></tr>
+  <tr><td>100</td><td>~1206 ms</td><td class="bad">Asistente válido</td></tr>
+  <tr><td>205</td><td>~1062 ms</td><td class="bad">Asistente válido</td></tr>
+  <tr><td>447</td><td>~1078 ms</td><td class="bad">Asistente válido</td></tr>
+  <tr><td>683</td><td>~1233 ms</td><td class="bad">Asistente válido</td></tr>
+  <tr><td>997</td><td>~1124 ms</td><td class="bad">Asistente válido</td></tr>
+</table>
+
+<div class="note">
+<strong>Hallazgo clave:</strong> los códigos válidos <strong>no son secuenciales</strong>; están dispersos en todo el rango <code>000</code>–<code>999</code> (p. ej. <code>205</code>, <code>447</code>, <code>683</code>, <code>997</code>). El dato "no superan los 200" acota la <strong>cantidad</strong>, no el <strong>rango</strong>: un barrido limitado a <code>000</code>–<code>199</code> habría sido incorrecto.
+</div>
+
+<p><strong>Validación del resultado:</strong></p>
+<table>
+  <tr><th>Verificación</th><th>Resultado</th></tr>
+  <tr><td>Coincidencia Burp ↔ script en <code>000</code>–<code>199</code></td><td class="ok">Los mismos 20 códigos en ambas herramientas</td></tr>
+  <tr><td>Falsos positivos por jitter (064, 097, 136, 186)</td><td class="ok">Descartados: no repiten la demora al re-medir</td></tr>
+  <tr><td>Separación de poblaciones</td><td class="ok">Bimodal limpia: ~95 ms vs ~1 s, sin valores intermedios</td></tr>
+  <tr><td>Re-test en Repeater (válidos vs inexistentes)</td><td class="ok">Confirmado</td></tr>
+  <tr><td>Control de coherencia con la cota del enunciado</td><td class="ok">159 ≤ 200</td></tr>
+</table>
+
+<p><strong>Resultado esperado (sistema seguro):</strong> el tiempo de respuesta sería constante para cualquier código, impidiendo distinguir válidos de inexistentes.</p>
+<p><strong>Resultado observado:</strong> los códigos válidos tardan ~1 s de forma consistente.</p>
+<p><strong>Conclusión de la PoC:</strong> se enumeraron <strong>159 códigos válidos</strong> → <strong>159 asistentes</strong>. Código ganador del laboratorio: <code>md5("159") = 140f6969d5213fd0ece03148e62e461e</code> (aceptado por la plataforma).</p>
+
+<h2>6. Recomendaciones de remediación</h2>
+<h3>6.1 Corrección inmediata</h3>
+<p>Normalizar el tiempo de respuesta: ejecutar siempre la verificación de clave (contra un hash <em>dummy</em> cuando el código no exista), de modo que válidos e inexistentes tarden lo mismo. Devolver el mismo mensaje y estado en todos los casos de error.</p>
+<h3>6.2 Medidas complementarias</h3>
+<ul>
+  <li>Aplicar <strong>rate limiting</strong> y detección de enumeración (200–1000 peticiones secuenciales es un patrón detectable).</li>
+  <li>Requerir autenticación/autorización antes de evaluar la existencia del código.</li>
+  <li>Usar identificadores <strong>no secuenciales ni cortos</strong> (p. ej. UUID) cuando no deban ser adivinables.</li>
+  <li>Revisar que el framework no introduzca otras discrepancias observables (cabeceras, tamaños, tiempos).</li>
+</ul>
+<h3>6.3 Criterios de aceptación</h3>
+<ul>
+  <li>☐ El tiempo de respuesta es indistinguible entre código válido e inexistente.</li>
+  <li>☐ Todos los errores devuelven el mismo mensaje y estado.</li>
+  <li>☐ El rate limiting bloquea la enumeración masiva.</li>
+  <li>☐ Se ejecutaron pruebas de regresión (timing + contenido).</li>
+</ul>
+<p class="small"><strong>Responsable sugerido:</strong> equipo de desarrollo backend. <strong>Fecha objetivo:</strong> a definir según prioridad.</p>
+
+<h2>7. Validación posterior y seguimiento</h2>
+<table>
+  <tr><th>Fecha</th><th>Responsable</th><th>Acción</th><th>Resultado</th></tr>
+  <tr><td>2026-11-11</td><td>S. Toledo Criado</td><td>Enumeración por timing + conteo</td><td>Hallazgo confirmado (159 asistentes)</td></tr>
+  <tr><td>[A definir]</td><td>Backend</td><td>Retest tras normalizar tiempos</td><td>Pendiente</td></tr>
+</table>
+<p><strong>Estado final:</strong> Abierto (resuelto como challenge; remediación del lado servidor pendiente).</p>
+
+<h2>8. Referencias</h2>
+<ul>
+  <li>OWASP Top 10 — A05:2021 Security Misconfiguration: https://owasp.org/Top10/A05_2021-Security_Misconfiguration/</li>
+  <li>MITRE CWE-208 — Observable Timing Discrepancy: https://cwe.mitre.org/data/definitions/208.html</li>
+  <li>MITRE CWE-203 — Observable Discrepancy: https://cwe.mitre.org/data/definitions/203.html</li>
+  <li>MITRE CWE-200 — Exposure of Sensitive Information: https://cwe.mitre.org/data/definitions/200.html</li>
+  <li>FIRST — CVSS v3.1 Calculator: https://www.first.org/cvss/calculator/3.1</li>
+</ul>
+
+<footer>
+Documento confidencial — uso autorizado del curso Software Seguro. Generado con la plantilla oficial de reportes (Módulo IV). Las pruebas se ejecutaron únicamente sobre el entorno de laboratorio autorizado; los datos sensibles (cookies de sesión) fueron redactados.
+</footer>
+
+</body>
+</html>

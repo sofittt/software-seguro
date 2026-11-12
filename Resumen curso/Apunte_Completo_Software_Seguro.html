@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Apunte completo — Software Seguro</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  :root{
+    --tinta:#1a1f2b; --suave:#51607a; --linea:#e2e7f0; --fondo:#f7f9fc;
+    --azul:#2563eb; --azulbg:#eef4ff; --verde:#0f9d58; --verdebg:#e9f7ef;
+    --ambar:#b7791f; --ambarbg:#fdf6e3; --rojo:#c0392b; --rojobg:#fdecea;
+    --violeta:#7c3aed; --violetabg:#f3edff; --cyan:#0e7490; --cyanbg:#e4f6fb;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--tinta); line-height:1.55; font-size:10.3pt; margin:0;
+    background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  .cover{
+    background:linear-gradient(135deg,#1e293b,#0f172a); color:#fff;
+    border-radius:14px; padding:34px 30px; margin-bottom:26px;
+  }
+  .cover h1{ margin:0 0 6px; font-size:26pt; letter-spacing:.3px; }
+  .cover p{ margin:2px 0; color:#cbd5e1; font-size:10.5pt; }
+  .cover .badge{
+    display:inline-block; margin-top:12px; background:#334155; color:#e2e8f0;
+    padding:4px 11px; border-radius:20px; font-size:8.6pt; letter-spacing:.4px;
+  }
+  h1.sec{ font-size:15.5pt; margin:26px 0 8px; padding-bottom:6px; border-bottom:2px solid var(--linea); }
+  h2{ font-size:12.5pt; margin:18px 0 6px; color:#0f172a; }
+  h3{ font-size:11pt; margin:13px 0 4px; color:#334155; }
+  p{ margin:6px 0; }
+  ul,ol{ margin:6px 0 6px 0; padding-left:20px; }
+  li{ margin:3px 0; }
+  code{ background:#f1f5f9; border-radius:4px; padding:1px 5px; font-family:"SF Mono",Consolas,"Liberation Mono",monospace; font-size:9pt; color:#0f172a; }
+  pre{ background:#0f172a; color:#e2e8f0; border-radius:9px; padding:12px 14px; overflow:auto; font-size:8.7pt; line-height:1.45; }
+  pre code{ background:none; color:inherit; padding:0; }
+  table{ width:100%; border-collapse:collapse; margin:10px 0; font-size:9.3pt; }
+  th,td{ border:1px solid var(--linea); padding:6px 9px; text-align:left; vertical-align:top; }
+  th{ background:var(--fondo); font-weight:600; }
+  blockquote{ margin:10px 0; padding:9px 14px; background:var(--azulbg); border-left:4px solid var(--azul); border-radius:6px; }
+  blockquote p{ margin:0; }
+  .idea{ background:#fff7ed; border:1px solid #fed7aa; border-left:5px solid var(--ambar); border-radius:8px; padding:12px 16px; margin:14px 0; }
+  .idea strong{ color:#9a3412; }
+  .mod{ border-radius:10px; padding:2px 16px 10px; margin:16px 0; border:1px solid var(--linea); }
+  .m1{ background:var(--azulbg); border-color:#c7d9ff; }
+  .m2{ background:var(--verdebg); border-color:#bfe6cd; }
+  .m3{ background:var(--ambarbg); border-color:#f0e3b8; }
+  .m4{ background:#fff0f0; border-color:#f6cccc; }
+  .m5{ background:var(--rojobg); border-color:#f3c9c4; }
+  .m6{ background:var(--violetabg); border-color:#ddccff; }
+  .mod h1.sec{ border-bottom-color:rgba(0,0,0,.12); }
+  .avoid-break{ break-inside:avoid; }
+  /* ---- Mapa conceptual ---- */
+  .mapa{ border:1px solid var(--linea); border-radius:12px; padding:18px; background:var(--fondo); margin:12px 0; }
+  .nodo-central{ background:linear-gradient(135deg,#1e293b,#334155); color:#fff; text-align:center; border-radius:10px; padding:12px 16px; max-width:460px; margin:0 auto 6px; }
+  .nodo-central b{ font-size:11.5pt; }
+  .nodo-central span{ display:block; font-size:8.6pt; color:#cbd5e1; margin-top:3px; }
+  .conector{ text-align:center; color:var(--suave); font-size:13pt; line-height:1; margin:2px 0; }
+  .fila{ display:flex; gap:7px; flex-wrap:nowrap; }
+  .caja{ flex:1; border-radius:8px; padding:8px 9px; font-size:8.1pt; border:1px solid rgba(0,0,0,.08); }
+  .caja b{ display:block; font-size:8.7pt; margin-bottom:3px; }
+  .caja small{ display:block; color:#334155; line-height:1.35; }
+  .etq{ text-align:center; font-weight:600; font-size:9pt; color:#fff; background:#334155; border-radius:20px; padding:4px 10px; max-width:360px; margin:16px auto 8px; }
+  .preg{ display:flex; gap:6px; margin-top:12px; }
+  .preg div{ flex:1; text-align:center; font-size:7.8pt; background:#fff; border:1px dashed #94a3b8; border-radius:7px; padding:6px 5px; color:#334155; }
+  .footer{ margin-top:26px; padding-top:10px; border-top:1px solid var(--linea); color:var(--suave); font-size:8.6pt; text-align:center; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>📘 Apunte completo</h1>
+  <p style="font-size:13pt;color:#fff;margin-top:2px;">Curso <strong>Software Seguro</strong></p>
+  <p>Resumen de todo el curso explicado en criollo, con ejemplos, analogías y mapa conceptual.</p>
+  <p>Módulos I a VI · Taxonomía de ataques · Herramientas · Cómo se reporta</p>
+  <span class="badge">USO EDUCATIVO · REPASO PERSONAL</span>
+</div>
+
+<div class="idea avoid-break">
+  <strong>🧭 La idea que ordena TODO el curso</strong>
+  <p style="margin-top:6px;">Casi todas las vulnerabilidades web se resumen en una frase:</p>
+  <p><strong>«El sistema confía en algo que viene del lado del usuario sin verificarlo del lado del servidor.»</strong></p>
+  <p>El navegador está en manos del atacante: puede cambiar la URL, el cuerpo, los headers, las cookies, los precios, los IDs… todo. Regla de oro: <strong>nunca confíes en el cliente, validá siempre en el servidor.</strong></p>
+</div>
+
+<!-- ===================== MÓDULO I ===================== -->
+<div class="mod m1">
+<h1 class="sec">🟦 Módulo I — Cómo viaja la información (arquitectura y HTTPS)</h1>
+
+<h2>1. Mapeo de arquitectura lógica</h2>
+<pre><code>Usuario → Frontend → [HTTPS/TLS] → Backend → Base de Datos
+                                        ↓
+Usuario ← Frontend ← [HTTPS/TLS] ← Backend ← (resultado)</code></pre>
+<ul>
+  <li><b>Frontend:</b> lo que ves. Vive en tu navegador → <b>no es confiable</b>.</li>
+  <li><b>Backend:</b> el servidor que decide. Acá deben estar los controles.</li>
+  <li><b>Base de datos:</b> usuarios, claves (hasheadas), datos.</li>
+  <li><b>HTTPS/TLS:</b> el túnel cifrado por donde viajan los datos.</li>
+</ul>
+
+<h2>2. Laboratorio Ventas — automatizar con Python</h2>
+<p>El endpoint <code>/ventas/?id=1</code> devolvía códigos distintos: <b>403</b> (existe pero sin permiso) y <b>404</b> (no existe). Se recorrieron los IDs con <code>requests</code>. Cuando un ID editable muestra cosas distintas según el valor → puerta de un <b>IDOR / control de acceso roto</b>.</p>
+
+<h2>3. TLS Handshake — el "apretón de manos" de HTTPS</h2>
+<ol>
+  <li>El navegador pide hablar seguro.</li>
+  <li>El servidor manda su <b>certificado digital</b> (su "DNI").</li>
+  <li>El navegador verifica que sea válido y del dominio correcto.</li>
+  <li>Acuerdan una <b>clave secreta</b> y a partir de ahí todo va cifrado.</li>
+</ol>
+<p><i>Analogía:</i> dos personas que se muestran el documento y acuerdan un idioma propio antes de contarse un secreto.</p>
+
+<h2>4. Instalación de proxy (Burp Suite)</h2>
+<pre><code>Navegador → [ Burp Suite 127.0.0.1:8080 ] → Servidor</code></pre>
+<p>Un proxy de interceptación se mete en el medio para <b>ver y modificar</b> peticiones (ej. <code>GET /api/gastos/</code>, <code>POST /api/gastos/1/editar/</code>). Es la herramienta #1 del pentester web.</p>
+</div>
+
+<!-- ===================== MÓDULO II ===================== -->
+<div class="mod m2">
+<h1 class="sec">🟩 Módulo II — Reconocimiento (mirar antes de tocar)</h1>
+
+<h2>1. Puertos y servicios esenciales</h2>
+<p><i>Analogía:</i> la IP es el edificio; los <b>puertos</b> son las puertas.</p>
+<table>
+<tr><th>Puerto</th><th>Servicio</th><th>¿Seguro?</th></tr>
+<tr><td>20/21</td><td>FTP (archivos)</td><td>❌ no cifra</td></tr>
+<tr><td>22</td><td>SSH (acceso remoto)</td><td>✅ cifrado</td></tr>
+<tr><td>23</td><td>Telnet</td><td>❌ obsoleto</td></tr>
+<tr><td>80</td><td>HTTP</td><td>❌ sin cifrar</td></tr>
+<tr><td>443</td><td>HTTPS</td><td>✅ cifrado</td></tr>
+<tr><td>3306</td><td>MySQL (base de datos)</td><td>⚠️ no debería estar expuesto</td></tr>
+</table>
+
+<h2>2. Escaneo con Nmap</h2>
+<p><b>Nmap</b> dice qué puertos/servicios están abiertos. <b>Regla ética:</b> solo con autorización — se usó un programa de <b>Bug Bounty</b> (GitHub) revisando el <i>scope</i>.</p>
+<pre><code>nmap -sV app.ejemplo.com   # -sV detecta versiones de los servicios</code></pre>
+
+<h2>3. Reconocimiento de subdominios</h2>
+<p>En <code>mail.google.com</code>, <code>mail</code> es el subdominio. Cada subdominio (<code>app.</code>, <code>api.</code>, <code>dev.</code>, <code>staging.</code>) puede ser una app distinta, y a veces una está mal protegida.</p>
+</div>
+
+<!-- ===================== MÓDULO III ===================== -->
+<div class="mod m3">
+<h1 class="sec">🟨 Módulo III — Interceptar y manipular peticiones (Burp a fondo)</h1>
+
+<h2>1. Man-in-the-Middle local</h2>
+<p>Se configura Burp como proxy y se instala su <b>certificado CA</b> para ver también el tráfico <b>HTTPS</b>. <i>Analogía:</i> abrir el sobre de una carta, leerla, cambiarla y cerrarla antes de que llegue.</p>
+
+<h2>2. Manipulación manual con Repeater</h2>
+<p>El <b>Repeater</b> toma una petición y la reenvía modificada cuantas veces quieras.</p>
+<pre><code>POST /start-challenge
+Content-Type: application/json
+
+{ "challengeId": 3 }</code></pre>
+<p>Si cambiás un valor y el servidor te deja hacer algo indebido → hallazgo.</p>
+
+<h2>3. Automatización y fuerza bruta</h2>
+<ul>
+  <li><b>Fuerza bruta:</b> probar TODAS las combinaciones (PIN de 4 dígitos = 10.000).</li>
+  <li><b>Diccionario:</b> probar una LISTA de claves comunes (<code>123456</code>, <code>password</code>…). Más rápido.</li>
+</ul>
+<p><b>Defensa:</b> rate limiting, bloqueo de cuenta, captcha, MFA. (Herramienta: Burp <b>Intruder</b>.)</p>
+</div>
+
+<!-- ===================== MÓDULO IV ===================== -->
+<div class="mod m4">
+<h1 class="sec">🟧 Módulo IV — Estandarizar vulnerabilidades y reportar</h1>
+
+<h2>1. CVE y CWE (no confundir)</h2>
+<table>
+<tr><th></th><th>CVE</th><th>CWE</th></tr>
+<tr><td>¿Qué es?</td><td>Una vulnerabilidad concreta publicada</td><td>Un tipo de debilidad</td></tr>
+<tr><td>Responde</td><td>"¿Qué bug apareció?"</td><td>"¿Qué error lo causó?"</td></tr>
+<tr><td>Formato</td><td><code>CVE-2021-44228</code></td><td><code>CWE-89</code></td></tr>
+<tr><td>Ejemplo</td><td>Log4Shell (Log4j)</td><td>CWE-89 = inyección SQL</td></tr>
+</table>
+
+<h2>2. Tríada CIA (los 3 pilares)</h2>
+<table>
+<tr><th>Pilar</th><th>Protege</th><th>Ataque que lo rompe</th></tr>
+<tr><td><b>C</b>onfidencialidad</td><td>Que solo vean quienes deben</td><td>IDOR (ver la factura de otro)</td></tr>
+<tr><td><b>I</b>ntegridad</td><td>Que no se alteren sin permiso</td><td>Parameter tampering (<code>precio=100</code>)</td></tr>
+<tr><td><b>A</b>vailability</td><td>Que el servicio esté disponible</td><td>DDoS (saturar el server)</td></tr>
+</table>
+
+<h2>3. Plantilla de reporte de pentesting</h2>
+<p>Identificación → Resumen ejecutivo → Detalles técnicos → Métricas CVSS → PoC → Recomendaciones → Validación.</p>
+
+<h2>4. Primer reporte oficial — Turnero (IDOR)</h2>
+<p>Se pudo <b>borrar turnos de otro usuario</b> (<code>xdalvik</code>) porque el servidor no validaba al dueño. CWE-639/862. <b>CVSS 8.8 Alta</b> → <code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H</code>.</p>
+
+<h3>🎯 Cómo leer un vector CVSS</h3>
+<table>
+<tr><th>Sigla</th><th>Significa</th><th>Valores</th></tr>
+<tr><td>AV</td><td>Desde dónde se ataca</td><td>N / A / L / P</td></tr>
+<tr><td>AC</td><td>Complejidad</td><td>L / H</td></tr>
+<tr><td>PR</td><td>Permisos necesarios</td><td>N / L / H</td></tr>
+<tr><td>UI</td><td>¿Necesita a la víctima?</td><td>N / R</td></tr>
+<tr><td>S</td><td>Alcance</td><td>U / C</td></tr>
+<tr><td>C/I/A</td><td>Impacto en cada pilar</td><td>N / L / H</td></tr>
+</table>
+<p><b>Lectura rápida:</b> <code>AV:N/PR:N/UI:N</code> + <code>C:H/I:H/A:H</code> = por internet, sin credenciales, sin ayuda de la víctima, rompe todo → <b>crítico (9–10)</b>.</p>
+<table>
+<tr><th>Puntaje</th><td>0.1–3.9 Baja</td><td>4.0–6.9 Media</td><td>7.0–8.9 Alta</td><td>9.0–10 Crítica</td></tr>
+</table>
+</div>
+
+<!-- ===================== MÓDULO V ===================== -->
+<div class="mod m5">
+<h1 class="sec">🟥 Módulo V — Configuraciones inseguras (Security Misconfiguration, A05)</h1>
+
+<h2>1. Caza pasiva de configuraciones inseguras</h2>
+<p>Observar <b>sin explotar</b>: headers faltantes, paneles expuestos, versiones viejas, mensajes que hablan de más. Solo mirar y documentar.</p>
+
+<h2>2. Ejecución de laboratorios — Reporte Asistencia (VULN-0005)</h2>
+<p>Lab resuelto y reportado con la plantilla oficial (mala configuración que permitía acceso/manipulación indebida).</p>
+
+<h2>3. Peligros del Directory Listing</h2>
+<pre><code>Index of /archivos/
+backup_2026.zip      12 MB
+config.old            3 KB
+reporte_clientes.csv  480 KB</code></pre>
+<p>Si el listado está activo y no hay <code>index.html</code>, el server muestra TODOS los archivos. <b>Defensa:</b> desactivar el listado y no dejar archivos sensibles en carpetas web.</p>
+
+<h2>4. Manejo inseguro de errores (Stack Traces)</h2>
+<p>❌ Inseguro: muestra la traza interna (rutas, framework, versiones). ✅ Seguro: mensaje genérico con un <code>requestId</code> para buscar en logs. Un stack trace es un mapa interno regalado al atacante (<i>Information Disclosure</i>).</p>
+</div>
+
+<!-- ===================== MÓDULO VI ===================== -->
+<div class="mod m6">
+<h1 class="sec">🟪 Módulo VI — Autenticación, sesión y JWT</h1>
+
+<h2>1. Auditoría de cookies — banderas de seguridad</h2>
+<table>
+<tr><th>Bandera</th><th>Qué hace</th><th>Si falta…</th></tr>
+<tr><td>HttpOnly</td><td>El JS no puede leer la cookie</td><td>Un XSS podría robar la sesión</td></tr>
+<tr><td>Secure</td><td>Solo viaja por HTTPS</td><td>Podría ser interceptada por HTTP</td></tr>
+<tr><td>SameSite</td><td>Controla envío entre sitios</td><td>Facilita CSRF</td></tr>
+</table>
+<p><b>Matiz:</b> <code>HttpOnly</code> no evita el XSS, solo que roben <i>esa</i> cookie. Una cookie que vence al cerrar el navegador no es necesariamente de autenticación.</p>
+
+<h2>2. Ingeniería inversa a JWT ⭐</h2>
+<pre><code>BASE64URL(Header) . BASE64URL(Payload) . BASE64URL(Signature)
+   eyJhbGci...     .     eyJ1c2Vy...     .    FGoloAz...</code></pre>
+<table>
+<tr><th>Parte</th><th>Contiene</th><th>Ejemplo</th></tr>
+<tr><td>Header</td><td>El algoritmo de firma</td><td><code>{"alg":"HS256"}</code></td></tr>
+<tr><td>Payload</td><td>Los datos / ¡quién sos!</td><td><code>{"user_id":1,"exp":...}</code></td></tr>
+<tr><td>Signature</td><td>La firma anti-manipulación</td><td>hash con la clave secreta</td></tr>
+</table>
+<blockquote><p><b>Base64URL NO es cifrado.</b> Cualquiera que tenga el token puede <b>leer</b> Header y Payload. Lo que no puede (si está bien hecho) es <b>cambiarlos</b>, porque la firma no coincidiría. Para ver los valores no hay que "descifrar": pegás el Payload en jwt.io o lo pasás por Base64.</p></blockquote>
+<p><b>La vulnerabilidad:</b> si la <code>SECRET_KEY</code> se filtra (o es débil), vos mismo <b>firmás</b> un token con el <code>user_id</code> del admin. El servidor lo valida con la misma clave y te cree → <b>escalada a admin</b>.</p>
+
+<h2>3. Laboratorios resueltos</h2>
+<ul>
+  <li><b>Consulta de Multas (VULN-0006):</b> la <code>SECRET_KEY</code> se filtraba por un endpoint → JWT de admin firmado → escalada. <b>CVSS 9.1 Crítica</b>.</li>
+  <li><b>Notas Universitarias (VULN-0007):</b> superusuario por defecto (<code>admin/admin</code>) + <code>DEBUG=True</code> + IDOR en el editor de notas (<code>materia_id</code>/<code>estudiante_id</code> editables). <b>CVSS 9.8 Crítica</b>.</li>
+</ul>
+
+<h2>4. Ataque de Algoritmo "none"</h2>
+<pre><code>{ "alg": "none", "typ": "JWT" }</code></pre>
+<p>Si el servidor acepta <code>alg:none</code>, <b>ignora la firma</b> y cree cualquier Payload → admin sin conocer la clave. <i>Analogía:</i> un control que, si le decís "no me revises", te deja pasar. <b>Defensa:</b> exigir el algoritmo correcto y rechazar <code>none</code>.</p>
+</div>
+
+<!-- ===================== TAXONOMÍA ===================== -->
+<h1 class="sec">🗂️ Taxonomía de ataques — las 9 familias de Software Seguro</h1>
+<table>
+<tr><th>Familia</th><th>Pregunta clave</th><th>Ejemplos (1 línea c/u)</th></tr>
+<tr><td><b>01 Inyecciones</b></td><td>¿Separa datos de código?</td><td>SQLi (<code>admin' --</code>) · NoSQLi (<code>{"$ne":null}</code>) · XSS (<code>&lt;img onerror&gt;</code>) · SSTI (<code>{{7*7}}</code>→49) · RCE (<code>; cat /etc/passwd</code>)</td></tr>
+<tr><td><b>02 Control de acceso</b></td><td>¿Esto me corresponde?</td><td>Broken AC (entrar a <code>/admin</code>) · IDOR (<code>/factura/1002</code>) · Mass Assignment (<code>"rol":"admin"</code>) · Lógica de negocio (cupón x20)</td></tr>
+<tr><td><b>03 Autenticación</b></td><td>¿Verifica quién soy?</td><td>Auth (<code>admin/admin</code>) · Fuerza bruta · Tokens (JWT) · FIDO · CSRF</td></tr>
+<tr><td><b>04 Servidor y archivos</b></td><td>¿Confía de más en rutas/servicios?</td><td>File upload (<code>shell.php</code>) · Path traversal (<code>../../etc/passwd</code>) · SSRF (<code>169.254.169.254</code>) · Info. Disclosure · Race conditions · CVE</td></tr>
+<tr><td><b>05 Reversing</b></td><td>¿Esconde secretos en el código?</td><td>Reversing APK/Desktop · Buffer overflow</td></tr>
+<tr><td><b>06 Cripto y forense</b></td><td>¿Cifrado débil?</td><td>Criptoanálisis (MD5 sin sal) · Forense (memoria/esteganografía)</td></tr>
+<tr><td><b>07 Tiempo real</b></td><td>¿Revalida permisos en vivo?</td><td>WebSockets · WebRTC (filtra IP real)</td></tr>
+<tr><td><b>08 IA y LLMs</b></td><td>¿Aísla las instrucciones?</td><td>Prompt injection ("ignorá tus instrucciones…")</td></tr>
+</table>
+
+<!-- ===================== HERRAMIENTAS ===================== -->
+<h1 class="sec">🧰 Caja de herramientas</h1>
+<table>
+<tr><th>Herramienta</th><th>Para qué</th></tr>
+<tr><td>Burp Suite</td><td>Proxy: interceptar, modificar (Repeater), automatizar (Intruder)</td></tr>
+<tr><td>Nmap</td><td>Escanear puertos/servicios (con autorización)</td></tr>
+<tr><td>Python + requests</td><td>Automatizar pedidos (enumerar IDs, probar endpoints)</td></tr>
+<tr><td>DevTools (F12)</td><td>Cookies (Storage), peticiones (Network), JS (Console)</td></tr>
+<tr><td>jwt.io / Base64</td><td>Decodificar y analizar JWT</td></tr>
+<tr><td>rockyou.txt</td><td>Diccionario de contraseñas</td></tr>
+<tr><td>CVSS Calculator</td><td>Calcular la gravedad de un hallazgo</td></tr>
+</table>
+
+<!-- ===================== MAPA CONCEPTUAL ===================== -->
+<h1 class="sec">🗺️ Mapa conceptual — todo el curso de un vistazo</h1>
+<div class="mapa">
+  <div class="nodo-central">
+    <b>SEGURIDAD DE SOFTWARE (WEB)</b>
+    <span>«El servidor NO debe confiar en algo que controla el usuario sin verificar»</span>
+  </div>
+  <div class="conector">▼ &nbsp; los 6 módulos del curso &nbsp; ▼</div>
+  <div class="fila">
+    <div class="caja m1"><b>I · El dato</b><small>Arquitectura Front/Back/DB · HTTPS/TLS · Proxy (Burp)</small></div>
+    <div class="caja m2"><b>II · Reconocer</b><small>Puertos/servicios · Nmap · Subdominios</small></div>
+    <div class="caja m3"><b>III · Manipular</b><small>Burp: MITM, Repeater, fuerza bruta vs diccionario</small></div>
+    <div class="caja m4"><b>IV · Reportar</b><small>CVE vs CWE · Tríada CIA · CVSS · IDOR Turnero</small></div>
+    <div class="caja m5"><b>V · Misconfig</b><small>Directory listing · Stack traces · Info. disclosure</small></div>
+    <div class="caja m6"><b>VI · Auth/JWT</b><small>Cookies · JWT ⭐ · Algoritmo none</small></div>
+  </div>
+
+  <div class="etq">9 FAMILIAS DE ATAQUE (plataforma)</div>
+  <div class="fila">
+    <div class="caja" style="background:#eef4ff"><b>01 Inyecciones</b><small>SQLi · NoSQLi · XSS · SSTI · RCE</small></div>
+    <div class="caja" style="background:#e9f7ef"><b>02 Acceso</b><small>Broken AC · IDOR · Mass Assign · Lógica</small></div>
+    <div class="caja" style="background:#fdf6e3"><b>03 Auth</b><small>Auth · Fuerza bruta · Tokens · FIDO · CSRF</small></div>
+    <div class="caja" style="background:#fdecea"><b>04 Servidor</b><small>Upload · Path trav. · SSRF · Race · CVE</small></div>
+    <div class="caja" style="background:#f3edff"><b>05–08 Otras</b><small>Reversing · Cripto/forense · WebSockets/RTC · Web LLM</small></div>
+  </div>
+
+  <div class="preg">
+    <div>¿Separa <b>datos</b> de <b>código</b>?<br>(Inyección)</div>
+    <div>¿Esto me <b>corresponde</b>?<br>(Acceso)</div>
+    <div>¿<b>Quién soy</b>?<br>(Auth)</div>
+    <div>¿Confía de más en <b>rutas/svc</b>?<br>(Servidor)</div>
+    <div>¿<b>Secretos</b> en código/cripto débil?<br>(Reversing/Cripto)</div>
+  </div>
+</div>
+
+<!-- ===================== CUADRO RESUMEN ===================== -->
+<h1 class="sec">✅ Cuadro resumen final</h1>
+<table>
+<tr><th>Familia</th><th>La pregunta que la explota</th><th>Defensa general</th></tr>
+<tr><td>Inyecciones</td><td>¿Separa mis datos del código?</td><td>Parametrizar, escapar la salida, no pasar input a la shell/template</td></tr>
+<tr><td>Control de acceso</td><td>¿Chequea que esto me corresponde?</td><td>Validar permiso y propiedad en el servidor, en cada acción</td></tr>
+<tr><td>Autenticación</td><td>¿Verifica bien quién soy?</td><td>Claves fuertes, MFA, rate limiting, firmas verificadas, exigir algoritmo</td></tr>
+<tr><td>Servidor/archivos</td><td>¿Confía de más en rutas/archivos/servicios?</td><td>Lista blanca, normalizar rutas, bloquear IPs internas, actualizar</td></tr>
+<tr><td>Reversing/Cripto</td><td>¿Esconde secretos en código o cifrado débil?</td><td>No hardcodear secretos, cripto estándar con sal</td></tr>
+<tr><td>Tiempo real/IA</td><td>¿Revalida permisos y aísla las instrucciones?</td><td>Autorizar cada mensaje, separar instrucción de dato</td></tr>
+</table>
+<blockquote><p><b>La madre de todas las preguntas:</b> ¿el servidor está confiando en algo que controla el usuario sin verificarlo?</p></blockquote>
+
+<div class="footer">Apunte completo — Curso Software Seguro · Repaso personal · Uso educativo</div>
+
+</body>
+</html>

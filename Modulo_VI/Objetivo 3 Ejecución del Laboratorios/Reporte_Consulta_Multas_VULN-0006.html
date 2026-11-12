@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte VULN-0006 — Consulta de multas</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    color: #1f2933;
+    font-size: 11px;
+    line-height: 1.5;
+    margin: 0;
+  }
+  h1 { font-size: 22px; color: #0b3d63; margin: 0 0 2px; }
+  h2 {
+    font-size: 15px; color: #0b3d63;
+    border-bottom: 2px solid #0b3d63;
+    padding-bottom: 3px; margin: 22px 0 10px;
+  }
+  h3 { font-size: 12.5px; color: #15557f; margin: 14px 0 6px; }
+  p { margin: 6px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+  th, td { border: 1px solid #c3ccd6; padding: 5px 8px; text-align: left; vertical-align: top; }
+  th { background: #eef3f8; color: #0b3d63; font-weight: 600; }
+  code, pre { font-family: "Consolas", monospace; }
+  code { background: #f2f4f7; padding: 1px 4px; border-radius: 3px; font-size: 10px; }
+  pre {
+    background: #0f1b2b; color: #e6edf3; padding: 10px 12px;
+    border-radius: 5px; font-size: 9.5px; line-height: 1.45;
+    white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;
+  }
+  .cover { border: 1px solid #c3ccd6; border-radius: 6px; padding: 16px 18px; background: #f8fafc; }
+  .sub { color: #52606d; font-size: 11px; }
+  .badge {
+    display: inline-block; padding: 2px 9px; border-radius: 10px;
+    font-weight: 700; font-size: 11px; color: #fff; background: #b42318;
+  }
+  .meta-grid { width: 100%; margin-top: 10px; }
+  .note { background: #fff8e6; border-left: 4px solid #d08700; padding: 8px 12px; margin: 10px 0; font-size: 10.5px; }
+  .ok { color: #0a7d3c; font-weight: 600; }
+  .bad { color: #b42318; font-weight: 600; }
+  ul { margin: 6px 0 6px 18px; padding: 0; }
+  li { margin: 3px 0; }
+  .small { font-size: 10px; color: #52606d; }
+  figure { margin: 10px 0; }
+  figure img { width: 100%; border: 1px solid #c3ccd6; border-radius: 4px; }
+  figcaption { font-size: 9.5px; color: #52606d; margin-top: 4px; }
+  footer { margin-top: 24px; border-top: 1px solid #c3ccd6; padding-top: 8px; font-size: 9px; color: #7b8794; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>Reporte técnico de vulnerabilidad</h1>
+  <div class="sub">Curso <strong>Software Seguro</strong> · Módulo VI — Objetivo 3: Ejecución de Laboratorios · Documento confidencial (uso autorizado)</div>
+  <table class="meta-grid">
+    <tr><th style="width:32%">ID del hallazgo</th><td>VULN-0006</td></tr>
+    <tr><th>Título</th><td>Exposición de la <code>SECRET_KEY</code> de Django en endpoint de depuración, habilitando forja de JWT y escalamiento de privilegios</td></tr>
+    <tr><th>Laboratorio / activo</th><td>Consulta de multas — "Escalamiento de privilegios" (entorno de práctica autorizado del curso)</td></tr>
+    <tr><th>URL / endpoint</th><td><code>GET https://chl-&lt;id&gt;-consulta-multas.softwareseguro.com.ar/jsonp/?callback=…</code></td></tr>
+    <tr><th>Severidad</th><td><span class="badge">CRÍTICA — CVSS v3.1: 9.1</span></td></tr>
+    <tr><th>Clasificación</th><td>CWE-200 / CWE-522 / CWE-269 · OWASP A05:2021 Security Misconfiguration (y A02:2021 Cryptographic Failures)</td></tr>
+    <tr><th>Fecha de detección</th><td>2026-11-11</td></tr>
+    <tr><th>Autor/a</th><td>Sofía Lourdes Toledo Criado</td></tr>
+    <tr><th>Estado</th><td>Resuelto en laboratorio · remediación recomendada</td></tr>
+  </table>
+</div>
+
+<h2>1. Identificación y trazabilidad</h2>
+<table>
+  <tr><th style="width:32%">Campo</th><th>Valor</th></tr>
+  <tr><td>ID del hallazgo</td><td>VULN-0006</td></tr>
+  <tr><td>Aplicación / activo</td><td>Aplicación web "Consulta de multas" (Django + django-rest-framework-jwt, front jQuery/Bootstrap, tras Cloudflare)</td></tr>
+  <tr><td>URL / endpoint</td><td><code>GET /jsonp/?callback=&lt;nombre&gt;</code> (fuga) → <code>GET /perfil/</code> (uso del privilegio)</td></tr>
+  <tr><td>Fecha de detección</td><td>2026-11-11</td></tr>
+  <tr><td>Reportado por</td><td>Sofía Lourdes Toledo Criado</td></tr>
+  <tr><td>Estado</td><td>Resuelto en laboratorio; remediación pendiente del lado del servidor</td></tr>
+  <tr><td>Alcance autorizado</td><td>Challenge del curso. Cuenta de prueba provista (<code>ignacio_123@yopmail.com</code>). Sin acceso a datos reales de terceros.</td></tr>
+</table>
+
+<h2>2. Resumen ejecutivo</h2>
+<p><strong>Hallazgo:</strong> la aplicación expone un endpoint de depuración (<code>/jsonp/</code>) que devuelve su configuración interna, incluida la <strong>clave secreta criptográfica</strong> (<code>SECRET_KEY</code>) con la que se firman los tokens de sesión (JWT). Cualquier persona, <strong>incluso sin iniciar sesión</strong>, puede leer esa clave y a partir de ella <strong>fabricar un token válido de cualquier usuario</strong>, incluido el administrador.</p>
+<p><strong>Riesgo para el negocio:</strong> toma de control total de cuentas (account takeover). Con la clave expuesta, un atacante remoto no autenticado se convierte en administrador y puede operar funciones privilegiadas (en este laboratorio, "pagar" multas ajenas); en un sistema real equivale al compromiso de todo el mecanismo de autenticación.</p>
+<p><strong>Impacto principal sobre la tríada CIA:</strong> <strong>Confidencialidad</strong> e <strong>Integridad</strong> (altas). La disponibilidad no se vio afectada en las pruebas.</p>
+<p><strong>Severidad y prioridad:</strong> Crítica (CVSS v3.1 9.1). Prioridad máxima: explotable de forma remota, sin privilegios previos, sin interacción del usuario y con impacto total sobre la autenticación.</p>
+<p><strong>Acción recomendada:</strong> eliminar/deshabilitar de inmediato el endpoint que expone la configuración, <strong>rotar la <code>SECRET_KEY</code></strong> (invalidando todos los tokens emitidos) y cargarla desde variables de entorno, nunca en código ni accesible por HTTP.</p>
+
+<h2>3. Detalles técnicos</h2>
+<h3>3.1 Descripción</h3>
+<p>La página <code>/perfil/</code> incluye un <code>&lt;script src="/jsonp/?callback=procesarDatos"&gt;</code> para cargar datos de configuración vía JSONP. Ese endpoint refleja el parámetro <code>callback</code> y responde con un objeto JSON que contiene parámetros sensibles del <em>settings</em> de Django, entre ellos <code>SECRET_KEY</code>, <code>MODO_DESARROLLO</code>, <code>TIME_ZONE</code>, etc. El endpoint <strong>no exige autenticación</strong> (responde 200 sin cookie de sesión, mientras que <code>/perfil/</code> responde 403).</p>
+<p>La aplicación autentica mediante un JWT HS256 almacenado en la cookie <code>auth</code> (HttpOnly). La firma del JWT se realiza con la <code>SECRET_KEY</code> de Django. Al quedar esa clave expuesta, se puede <strong>recalcular la firma HMAC-SHA256</strong> de un token arbitrario. Se verificó que la clave filtrada reproduce <strong>exactamente</strong> la firma del token legítimo de la cuenta de prueba, confirmando que es la clave de firma real.</p>
+<p>El control de rol del lado servidor se basa en el campo <code>email</code> contenido en el JWT. Forjando un token con <code>email = administrador_multas@yopmail.com</code> y firmándolo con la clave filtrada, el servidor reconoce al solicitante como administrador y revela el mensaje de éxito del desafío.</p>
+
+<h3>3.2 Componentes afectados</h3>
+<ul>
+  <li><strong>Aplicación / stack:</strong> Django + <code>django-rest-framework-jwt</code> (JWT HS256; payload con <code>user_id</code>, <code>email</code>, <code>exp</code>, <code>orig_iat</code>).</li>
+  <li><strong>Método y ruta de la fuga:</strong> <code>GET /jsonp/?callback=&lt;nombre&gt;</code>.</li>
+  <li><strong>Parámetros involucrados:</strong> <code>callback</code> (reflejado); cookie <code>auth</code> (JWT) en el uso del privilegio.</li>
+  <li><strong>Roles o permisos necesarios:</strong> <strong>ninguno</strong> para la fuga (no autenticado). La cuenta de Ignacio solo sirve de línea de base.</li>
+  <li><strong>Entorno y fecha de prueba:</strong> instancia de laboratorio del curso, 2026-11-11.</li>
+</ul>
+
+<h3>3.3 Clasificación y causa raíz</h3>
+<ul>
+  <li><strong>CWE-200</strong> — Exposure of Sensitive Information to an Unauthorized Actor (fuga de la configuración/clave).</li>
+  <li><strong>CWE-522</strong> — Insufficiently Protected Credentials (la clave de firma viaja por HTTP sin protección).</li>
+  <li><strong>CWE-269</strong> — Improper Privilege Management (el rol se decide por un dato forjable del token). Relacionadas: CWE-321 (uso de clave criptográfica expuesta) y CWE-798 (clave débil/predecible: <code>123456@pz*…</code>).</li>
+  <li><strong>CVE:</strong> No asignado / No aplica (debilidad de configuración propia de la aplicación).</li>
+  <li><strong>Referencia OWASP:</strong> A05:2021 Security Misconfiguration (endpoint de depuración expuesto en producción); también A02:2021 Cryptographic Failures (exposición de la clave de firma) y A07:2021 Identification and Authentication Failures (consecuencia).</li>
+  <li><strong>Causa raíz probable:</strong> endpoint de diagnóstico/JSONP dejado habilitado y sin autenticación, que serializa el <em>settings</em> completo incluyendo secretos; agravado por una <code>SECRET_KEY</code> débil y embebida.</li>
+</ul>
+
+<h3>3.4 Impacto técnico y alcance</h3>
+<p><strong>Demostrado:</strong> un atacante remoto no autenticado obtiene la <code>SECRET_KEY</code> y forja un JWT válido de administrador, logrando escalamiento de privilegios y acceso a la función administrativa del challenge (mensaje "SOS ADMINISTRADOR" y código ganador).</p>
+<p><strong>Alcance potencial (no todo demostrado):</strong> en Django la <code>SECRET_KEY</code> firma además sesiones, <em>cookies</em> firmadas y tokens de restablecimiento de contraseña; su exposición implica el compromiso del <strong>mecanismo de autenticación completo</strong> y la suplantación de cualquier usuario. Por eso el impacto en Confidencialidad e Integridad es alto. No se probó impacto en Disponibilidad.</p>
+
+<h2>4. Métricas CVSS</h2>
+<p><strong>Versión utilizada:</strong> CVSS v3.1.</p>
+<table>
+  <tr><th style="width:28%">Métrica</th><th>Valor / justificación</th></tr>
+  <tr><td>Vector CVSS completo</td><td><code>CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N</code></td></tr>
+  <tr><td>Puntaje base</td><td><strong>9.1</strong></td></tr>
+  <tr><td>Severidad CVSS</td><td>Crítica</td></tr>
+  <tr><td>Métricas relevantes</td><td><strong>AV:N</strong> (explotable por Internet); <strong>AC:L</strong> (una sola petición GET); <strong>PR:N</strong> (la fuga no requiere sesión); <strong>UI:N</strong> (sin interacción de víctima); <strong>S:U</strong> (mismo ámbito de autorización); <strong>C:H</strong> e <strong>I:H</strong> (toma de control total de cuentas); <strong>A:N</strong> (sin impacto de disponibilidad demostrado).</td></tr>
+  <tr><td>Calculadora / fuente</td><td>https://www.first.org/cvss/calculator/3.1</td></tr>
+  <tr><td>Prioridad interna</td><td>Crítica / inmediata — secreto de firma expuesto públicamente.</td></tr>
+</table>
+<p><strong>Justificación:</strong> se puntúa sobre el impacto <em>demostrado</em> (suplantación de cualquier cuenta → C:H/I:H) manteniendo <code>A:N</code> por no haberse probado afectación de disponibilidad. <span class="small">Nota: si se considera que el control administrativo obtenido permite destruir registros o interrumpir el servicio, correspondería <code>A:H</code>, elevando el puntaje a <strong>9.8</strong> con el vector <code>…/C:H/I:H/A:H</code>.</span></p>
+<div class="note">CVSS cuantifica la severidad técnica. Aquí la prioridad de corrección es máxima porque el secreto expuesto compromete toda la autenticación y el <em>exploit</em> es trivial, remoto y silencioso.</div>
+
+<h2>5. Prueba de concepto (PoC) — paso a paso</h2>
+<p><strong>Objetivo de la prueba:</strong> demostrar que, con la clave filtrada por <code>/jsonp/</code>, se forja un JWT de administrador y se accede a la función privilegiada.<br>
+<strong>Precondiciones:</strong> entorno de laboratorio autorizado; cuenta de prueba <code>ignacio_123@yopmail.com</code> (solo como línea de base; la fuga no la requiere).<br>
+<strong>Herramientas:</strong> navegador + consola de desarrollador (Web Crypto API para el HMAC-SHA256).</p>
+
+<ol>
+  <li><strong>Preparación:</strong> se accede a la app y se identifica que <code>/perfil/</code> carga <code>/jsonp/?callback=procesarDatos</code>.</li>
+  <li><strong>Solicitud inicial (fuga):</strong> se solicita <code>GET /jsonp/?callback=x</code> <em>sin cookie de sesión</em>. Responde 200 con la configuración, incluida <code>SECRET_KEY</code>.</li>
+  <li><strong>Modificación controlada:</strong> se toma el payload del JWT y se cambia <code>email</code> a <code>administrador_multas@yopmail.com</code> (pista del enunciado).</li>
+  <li><strong>Ejecución (forja):</strong> se recalcula la firma <code>HMAC-SHA256(header.payload, SECRET_KEY)</code> y se arma el JWT. Se verifica primero que la clave reproduce la firma del token legítimo de Ignacio (control de validez).</li>
+  <li><strong>Uso del privilegio:</strong> se coloca el token forjado en la cookie <code>auth</code> y se solicita <code>GET /perfil/</code>.</li>
+  <li><strong>Verificación:</strong> el servidor responde 200 y renderiza el banner de administrador con el código del desafío.</li>
+</ol>
+
+<h3>5.1 Evidencia</h3>
+<p><strong>Solicitud de la fuga (sanitizada):</strong></p>
+<pre>GET /jsonp/?callback=x HTTP/1.1
+Host: chl-&lt;id&gt;-consulta-multas.softwareseguro.com.ar
+(Sin cookie de sesión)</pre>
+
+<p><strong>Respuesta relevante (secreto parcialmente ofuscado):</strong></p>
+<pre>HTTP/1.1 200 OK
+Content-Type: text/javascript
+
+x({"MODO_DESARROLLO": false, "LANGUAGE_CODE": "en-us", "TIME_ZONE": "UTC",
+   "USE_I18N": true, "USE_L10N": true, "USE_TZ": true,
+   "SECRET_KEY": "123456@pz*+2p********"})</pre>
+
+<p><strong>Forja y verificación del JWT (extracto del PoC en consola):</strong></p>
+<pre>// 1) obtener la clave de la fuga
+S = fetch('/jsonp/?callback=x').then(...).match(/"SECRET_KEY":\s*"([^"]+)"/)[1]
+// 2) firmar con HMAC-SHA256 (Web Crypto)
+//    control: firma recalculada del token de Ignacio == firma real  -> true
+// 3) payload forjado: email = administrador_multas@yopmail.com
+// 4) token = header.payload.firma   (HS256, válido)
+document.cookie = 'auth=' + tokenForjado + '; path=/';   // reemplaza la sesión
+location.href = '/perfil/';</pre>
+
+<figure>
+  <img src="evidencias/01_multas_admin_codigo.jpg" alt="Perfil mostrando banner de administrador y código del desafío">
+  <figcaption>Figura 1. Tras colocar el JWT forjado en la cookie <code>auth</code>, <code>/perfil/</code> muestra "SOS ADMINISTRADOR. SUPERASTE EL DESAFÍO" con el código ganador (instancia de laboratorio). El saludo conserva el nombre de Ignacio porque el nombre se resuelve por <code>user_id</code>, pero el rol se decide por el <code>email</code> del token forjado.</figcaption>
+</figure>
+
+<ul>
+  <li><strong>Resultado esperado (seguro):</strong> la configuración y la clave de firma nunca deberían ser accesibles por HTTP; un token con firma ajena debería rechazarse (403).</li>
+  <li><strong>Resultado observado (vulnerable):</strong> la clave se obtiene sin autenticación y el token forjado es aceptado como administrador.</li>
+  <li><strong>Conclusión de la PoC:</strong> queda demostrado el escalamiento de privilegios por exposición de secreto. Límite: las pruebas se realizaron sobre la instancia de laboratorio con datos ficticios.</li>
+</ul>
+
+<h2>6. Recomendaciones de remediación</h2>
+<h3>6.1 Corrección inmediata</h3>
+<ul>
+  <li><strong>Eliminar o deshabilitar el endpoint <code>/jsonp/</code></strong> (o cualquier vista que serialice el <em>settings</em>). Nunca exponer configuración por HTTP.</li>
+  <li><strong>Rotar la <code>SECRET_KEY</code></strong> de inmediato (invalida todos los JWT/sesiones emitidos) y generar una clave larga y aleatoria.</li>
+  <li><strong>Cargar la clave desde variables de entorno / gestor de secretos</strong>, fuera del código y del árbol web.</li>
+</ul>
+<h3>6.2 Medidas complementarias</h3>
+<ul>
+  <li>No decidir autorización a partir de campos del token que representan identidad reutilizable (<code>email</code>); usar un claim de rol validado contra el servidor o la base de datos.</li>
+  <li>Revisar otros endpoints de diagnóstico/JSONP y desactivar el modo <em>debug</em> en producción.</li>
+  <li>Considerar firmas asimétricas (RS256) para que el verificador no comparta el secreto de firma.</li>
+  <li>Reducir la vigencia de los tokens (<code>exp</code>) y registrar/alertar accesos administrativos anómalos, sin exponer datos sensibles.</li>
+</ul>
+<h3>6.3 Criterios de aceptación</h3>
+<ul>
+  <li>[ ] <code>GET /jsonp/</code> ya no devuelve configuración ni secretos (404/deshabilitado).</li>
+  <li>[ ] La <code>SECRET_KEY</code> fue rotada y se carga desde el entorno.</li>
+  <li>[ ] Un JWT con firma inválida o forjada recibe 403.</li>
+  <li>[ ] La autorización de administrador no depende de un campo forjable del token.</li>
+  <li>[ ] Se ejecutaron pruebas de regresión (login legítimo sigue funcionando).</li>
+</ul>
+<p><strong>Responsable sugerido:</strong> equipo de desarrollo backend / plataforma.<br>
+<strong>Fecha objetivo:</strong> inmediata (riesgo crítico).</p>
+
+<h2>7. Validación posterior y seguimiento</h2>
+<table>
+  <tr><th>Fecha</th><th>Responsable</th><th>Acción</th><th>Resultado</th></tr>
+  <tr><td>2026-11-11</td><td>Sofía Lourdes Toledo Criado</td><td>Explotación y verificación en laboratorio</td><td>Confirmado (escalamiento a administrador)</td></tr>
+  <tr><td>[AAAA-MM-DD]</td><td>[Equipo backend]</td><td>Retest tras remediación</td><td>Pendiente</td></tr>
+</table>
+<p><strong>Estado final:</strong> Abierto (remediación pendiente del lado del servidor).<br>
+<strong>Observaciones:</strong> hallazgo resuelto como challenge; el reporte documenta causa raíz y remediación para un escenario real equivalente.</p>
+
+<footer>
+  Curso Software Seguro — Módulo VI, Objetivo 3. Documento confidencial de uso académico autorizado.
+  Pruebas realizadas exclusivamente sobre el entorno de laboratorio provisto por la cátedra, con datos ficticios.
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte VULN-0007 — Notas Universitarias</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; color: #1f2933; font-size: 11px; line-height: 1.5; margin: 0; }
+  h1 { font-size: 22px; color: #0b3d63; margin: 0 0 2px; }
+  h2 { font-size: 15px; color: #0b3d63; border-bottom: 2px solid #0b3d63; padding-bottom: 3px; margin: 22px 0 10px; }
+  h3 { font-size: 12.5px; color: #15557f; margin: 14px 0 6px; }
+  p { margin: 6px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+  th, td { border: 1px solid #c3ccd6; padding: 5px 8px; text-align: left; vertical-align: top; }
+  th { background: #eef3f8; color: #0b3d63; font-weight: 600; }
+  code, pre { font-family: "Consolas", monospace; }
+  code { background: #f2f4f7; padding: 1px 4px; border-radius: 3px; font-size: 10px; }
+  pre { background: #0f1b2b; color: #e6edf3; padding: 10px 12px; border-radius: 5px; font-size: 9.5px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
+  .cover { border: 1px solid #c3ccd6; border-radius: 6px; padding: 16px 18px; background: #f8fafc; }
+  .sub { color: #52606d; font-size: 11px; }
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 10px; font-weight: 700; font-size: 11px; color: #fff; background: #b42318; }
+  .meta-grid { width: 100%; margin-top: 10px; }
+  .note { background: #fff8e6; border-left: 4px solid #d08700; padding: 8px 12px; margin: 10px 0; font-size: 10.5px; }
+  ul { margin: 6px 0 6px 18px; padding: 0; }
+  li { margin: 3px 0; }
+  .small { font-size: 10px; color: #52606d; }
+  figure { margin: 10px 0; }
+  figure img { width: 100%; border: 1px solid #c3ccd6; border-radius: 4px; }
+  figcaption { font-size: 9.5px; color: #52606d; margin-top: 4px; }
+  footer { margin-top: 24px; border-top: 1px solid #c3ccd6; padding-top: 8px; font-size: 9px; color: #7b8794; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>Reporte técnico de vulnerabilidad</h1>
+  <div class="sub">Curso <strong>Software Seguro</strong> · Módulo VI — Objetivo 3: Ejecución de Laboratorios · Documento confidencial (uso autorizado)</div>
+  <table class="meta-grid">
+    <tr><th style="width:32%">ID del hallazgo</th><td>VULN-0007</td></tr>
+    <tr><th>Título</th><td>Alteración de calificaciones por control de acceso roto, habilitado por credenciales de superusuario por defecto y panel de administración expuesto</td></tr>
+    <tr><th>Laboratorio / activo</th><td>Notas Universitarias (entorno de práctica autorizado del curso)</td></tr>
+    <tr><th>URL / endpoint</th><td><code>POST https://chl-&lt;id&gt;-notas-universitarias.softwareseguro.com.ar/home/</code> · <code>/admin/</code></td></tr>
+    <tr><th>Severidad</th><td><span class="badge">CRÍTICA — CVSS v3.1: 9.8</span></td></tr>
+    <tr><th>Clasificación</th><td>CWE-1392 / CWE-285 / CWE-639 · OWASP A01:2021 Broken Access Control y A05:2021 Security Misconfiguration</td></tr>
+    <tr><th>Fecha de detección</th><td>2026-11-11</td></tr>
+    <tr><th>Autor/a</th><td>Sofía Lourdes Toledo Criado</td></tr>
+    <tr><th>Estado</th><td>Resuelto en laboratorio · remediación recomendada</td></tr>
+  </table>
+</div>
+
+<h2>1. Identificación y trazabilidad</h2>
+<table>
+  <tr><th style="width:32%">Campo</th><th>Valor</th></tr>
+  <tr><td>ID del hallazgo</td><td>VULN-0007</td></tr>
+  <tr><td>Aplicación / activo</td><td>Plataforma académica "Notas Universitarias" (Django + django-rest-framework-simplejwt, tras Cloudflare)</td></tr>
+  <tr><td>URL / endpoint</td><td><code>POST /home/</code> (editor de notas del docente) · <code>/admin/</code> (panel Django)</td></tr>
+  <tr><td>Fecha de detección</td><td>2026-11-11</td></tr>
+  <tr><td>Reportado por</td><td>Sofía Lourdes Toledo Criado</td></tr>
+  <tr><td>Estado</td><td>Resuelto en laboratorio; remediación pendiente del lado del servidor</td></tr>
+  <tr><td>Alcance autorizado</td><td>Challenge del curso. Cuenta de prueba <code>benjamin.sosa142</code>. Datos ficticios de alumnos.</td></tr>
+</table>
+
+<h2>2. Resumen ejecutivo</h2>
+<p><strong>Hallazgo:</strong> la plataforma de notas acumula varias malas configuraciones que, encadenadas, permiten a un atacante <strong>modificar la calificación de cualquier alumno en cualquier materia</strong>. El panel de administración de Django está expuesto en su URL por defecto y conserva las credenciales de superusuario por defecto (<code>admin</code>/<code>admin</code>); además, la función de carga de notas del docente no verifica que el profesor esté asignado a la materia ni al alumno que edita.</p>
+<p><strong>Riesgo para el negocio:</strong> cualquiera en Internet puede tomar control total del sistema (lectura, modificación y borrado de todos los datos) y falsificar el historial académico, comprometiendo la integridad de las calificaciones y la confianza institucional.</p>
+<p><strong>Impacto principal sobre la tríada CIA:</strong> <strong>Integridad</strong> (alteración de notas), <strong>Confidencialidad</strong> (acceso total a datos de usuarios) y <strong>Disponibilidad</strong> (un superusuario puede borrar datos).</p>
+<p><strong>Severidad y prioridad:</strong> Crítica (CVSS v3.1 9.8). Prioridad máxima: explotable de forma remota, sin privilegios previos y sin interacción del usuario.</p>
+<p><strong>Acción recomendada:</strong> cambiar de inmediato la contraseña del superusuario, restringir/ocultar el panel de administración, deshabilitar <code>DEBUG</code> en producción y agregar verificación de autorización por materia y alumno en el endpoint de carga de notas.</p>
+
+<h2>3. Detalles técnicos</h2>
+<h3>3.1 Descripción</h3>
+<p>Se identificaron tres debilidades que conforman la cadena de explotación:</p>
+<ul>
+  <li><strong>(a) <code>DEBUG = True</code> en producción.</strong> Ante una URL inexistente, Django devuelve su página de depuración, que <strong>lista todas las rutas</strong> de la aplicación (<code>admin/</code>, <code>api/token/refresh/</code>, <code>home/</code>, <code>logout/</code>, <code>challenge-status/</code>) y expone trazas de error.</li>
+  <li><strong>(b) Panel <code>/admin/</code> expuesto con credenciales por defecto.</strong> El administrador de Django está habilitado en su URL por defecto y el superusuario conserva credenciales triviales (<code>admin</code>/<code>admin</code>), sin modificarse desde la instalación.</li>
+  <li><strong>(c) Control de acceso roto en el editor de notas.</strong> Un usuario con rol docente (<code>is_staff</code>) accede en <code>/home/</code> a un formulario para cargar notas. El <code>POST</code> acepta los parámetros <code>materia_id</code> y <code>estudiante_id</code> provistos por el cliente <strong>sin validar que el docente esté asignado a esa materia ni a ese alumno</strong>, permitiendo editar la nota de cualquier alumno en cualquier materia.</li>
+</ul>
+<p>Encadenando (b) + (c): con el superusuario se obtiene rol docente y, abusando de (c), se eleva la nota del alumno objetivo en una materia que ese usuario ni siquiera dicta.</p>
+
+<h3>3.2 Componentes afectados</h3>
+<ul>
+  <li><strong>Aplicación / stack:</strong> Django (plantillas server-side + sesión) y DRF simplejwt para la API.</li>
+  <li><strong>Método y ruta:</strong> <code>POST /home/</code> con cuerpo <code>materia_id</code>, <code>estudiante_id</code>, <code>nota</code>; <code>GET/POST /admin/login/</code>.</li>
+  <li><strong>Parámetros involucrados:</strong> <code>materia_id</code> y <code>estudiante_id</code> (referencias directas a objetos, controladas por el cliente).</li>
+  <li><strong>Roles o permisos necesarios:</strong> ninguno legítimo — las credenciales del admin son por defecto; a partir de ahí, rol <code>is_staff</code>.</li>
+  <li><strong>Entorno y fecha de prueba:</strong> instancia de laboratorio del curso, 2026-11-11.</li>
+</ul>
+
+<h3>3.3 Clasificación y causa raíz</h3>
+<ul>
+  <li><strong>CWE-1392</strong> — Use of Default Credentials (superusuario <code>admin</code>/<code>admin</code>).</li>
+  <li><strong>CWE-285</strong> — Improper Authorization y <strong>CWE-639</strong> — Authorization Bypass Through User-Controlled Key (IDOR): el servidor confía en <code>materia_id</code>/<code>estudiante_id</code> del cliente sin comprobar la asignación docente.</li>
+  <li><strong>CWE-489 / CWE-200</strong> — Active Debug Code / exposición de información (<code>DEBUG=True</code>).</li>
+  <li><strong>CVE:</strong> No asignado / No aplica (debilidades de configuración y de lógica de autorización propias de la aplicación).</li>
+  <li><strong>Referencia OWASP:</strong> A01:2021 Broken Access Control (control de acceso roto en el editor de notas) y A05:2021 Security Misconfiguration (DEBUG, panel por defecto, credenciales por defecto). También A07:2021 (Identification and Authentication Failures) por las credenciales por defecto.</li>
+  <li><strong>Causa raíz probable:</strong> despliegue con parámetros de desarrollo y sin endurecer, y ausencia de verificación de autorización a nivel de objeto/función en la carga de notas.</li>
+</ul>
+
+<h3>3.4 Impacto técnico y alcance</h3>
+<p><strong>Demostrado:</strong> acceso de superusuario al panel Django y modificación de la nota de <code>benjamin.sosa142</code> en "Análisis Matemático I" de 2,00 a 9,00, en una materia no asignada al usuario utilizado, obteniendo el mensaje de éxito del desafío.</p>
+<p><strong>Alcance:</strong> con el superusuario se controla la totalidad del sistema (usuarios, permisos, tokens); con el fallo de autorización, cualquier cuenta docente puede falsificar las notas de todo el alumnado. Se afectan Confidencialidad, Integridad y Disponibilidad.</p>
+<div class="note"><strong>Nota metodológica:</strong> el enunciado aportaba también un <em>refresh token</em> (usuario 36, en lista negra) y el endpoint <code>/api/token/refresh/</code>. Se verificó que ese camino <strong>no era necesario</strong>: no existe una API de notas (las rutas se confirmaron con la propia página de depuración) y el usuario 36 resultó ser un alumno sin privilegios. La vía efectiva fue el panel + el editor de notas del docente.</div>
+
+<h2>4. Métricas CVSS</h2>
+<p><strong>Versión utilizada:</strong> CVSS v3.1.</p>
+<table>
+  <tr><th style="width:28%">Métrica</th><th>Valor / justificación</th></tr>
+  <tr><td>Vector CVSS completo</td><td><code>CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H</code></td></tr>
+  <tr><td>Puntaje base</td><td><strong>9.8</strong></td></tr>
+  <tr><td>Severidad CVSS</td><td>Crítica</td></tr>
+  <tr><td>Métricas relevantes</td><td><strong>AV:N</strong> (Internet); <strong>AC:L</strong> (login trivial + un POST); <strong>PR:N</strong> (credenciales por defecto, ningún privilegio legítimo requerido); <strong>UI:N</strong>; <strong>S:U</strong>; <strong>C:H/I:H/A:H</strong> (superusuario = control total: leer, alterar y borrar todos los datos).</td></tr>
+  <tr><td>Calculadora / fuente</td><td>https://www.first.org/cvss/calculator/3.1</td></tr>
+  <tr><td>Prioridad interna</td><td>Crítica / inmediata.</td></tr>
+</table>
+<p><strong>Justificación:</strong> el acceso con credenciales por defecto a un panel de administración de superusuario expuesto en Internet otorga control total del sistema, por lo que corresponde el máximo impacto en las tres dimensiones. El control de acceso roto del editor de notas amplía el abuso a cualquier cuenta con rol docente.</p>
+
+<h2>5. Prueba de concepto (PoC) — paso a paso</h2>
+<p><strong>Objetivo de la prueba:</strong> elevar la nota de <code>benjamin.sosa142</code> en "Análisis Matemático I" a 9.<br>
+<strong>Precondiciones:</strong> entorno de laboratorio autorizado; cuenta de prueba <code>benjamin.sosa142</code>.<br>
+<strong>Herramientas:</strong> navegador + consola de desarrollador.</p>
+<ol>
+  <li><strong>Reconocimiento:</strong> se solicita una URL inexistente; con <code>DEBUG=True</code>, Django lista todas las rutas y revela <code>/admin/</code>.</li>
+  <li><strong>Acceso al panel:</strong> se inicia sesión en <code>/admin/</code> con las credenciales por defecto <code>admin</code>/<code>admin</code> (superusuario).</li>
+  <li><strong>Descubrimiento del editor:</strong> autenticado como usuario <code>is_staff</code>, <code>/home/</code> muestra el formulario de carga de notas del docente para su materia (Física II), cuyo <code>POST</code> envía <code>materia_id</code>, <code>estudiante_id</code> y <code>nota</code>.</li>
+  <li><strong>Abuso de autorización (IDOR):</strong> se identifica el <code>estudiante_id</code> de benjamín (8) y el <code>materia_id</code> de "Análisis Matemático I" (2, materia no asignada al usuario) y se envía el <code>POST</code> con <code>nota=9</code>.</li>
+  <li><strong>Verificación:</strong> en la vista de alumno de benjamín, "Análisis Matemático I" pasa a 9,00 y aparece el mensaje de éxito del desafío.</li>
+</ol>
+
+<h3>5.1 Evidencia</h3>
+<p><strong>Solicitud de explotación (sanitizada):</strong></p>
+<pre>POST /home/ HTTP/1.1
+Host: chl-&lt;id&gt;-notas-universitarias.softwareseguro.com.ar
+Content-Type: application/x-www-form-urlencoded
+Cookie: sessionid=&lt;sesión del superusuario&gt;
+
+csrfmiddlewaretoken=&lt;token&gt;&materia_id=2&estudiante_id=8&nota=9</pre>
+
+<figure>
+  <img src="evidencias/03_notas_vista_profesor_editable.jpg" alt="Vista de docente con tabla editable de notas">
+  <figcaption>Figura 1. Al autenticarse como usuario <code>is_staff</code> (superusuario por defecto), <code>/home/</code> expone el editor de notas del docente. El <code>POST</code> no valida que el docente dicte la materia ni corresponda al alumno editado (control de acceso roto / IDOR).</figcaption>
+</figure>
+
+<figure>
+  <img src="evidencias/02_notas_benjamin_9_ganaste.jpg" alt="Notas de benjamín con Análisis Matemático I en 9,00 y mensaje GANASTE">
+  <figcaption>Figura 2. Vista de alumno de benjamín tras el ataque: "Análisis Matemático I" = 9,00 y mensaje de éxito del desafío ("GANASTE").</figcaption>
+</figure>
+
+<ul>
+  <li><strong>Resultado esperado (seguro):</strong> el panel no debería estar expuesto con credenciales por defecto, y el editor de notas debería rechazar materias/alumnos fuera de la asignación del docente (403).</li>
+  <li><strong>Resultado observado (vulnerable):</strong> login con <code>admin</code>/<code>admin</code> y modificación arbitraria de notas de cualquier alumno/materia.</li>
+  <li><strong>Conclusión de la PoC:</strong> queda demostrada la alteración de calificaciones por control de acceso roto encadenado con malas configuraciones. Pruebas sobre instancia de laboratorio con datos ficticios.</li>
+</ul>
+
+<h2>6. Recomendaciones de remediación</h2>
+<h3>6.1 Corrección inmediata</h3>
+<ul>
+  <li><strong>Cambiar la contraseña del superusuario</strong> por una fuerte y única; eliminar cuentas por defecto.</li>
+  <li><strong>Deshabilitar <code>DEBUG</code> en producción</strong> (<code>DEBUG=False</code> y <code>ALLOWED_HOSTS</code> correcto).</li>
+  <li><strong>Agregar autorización en <code>POST /home/</code>:</strong> validar en el servidor que el docente autenticado esté asignado a la <code>materia_id</code> y que el <code>estudiante_id</code> pertenezca a esa materia; nunca confiar en los IDs del cliente.</li>
+</ul>
+<h3>6.2 Medidas complementarias</h3>
+<ul>
+  <li>Restringir el acceso al panel <code>/admin/</code> (IP allowlist / VPN) y cambiar su URL por defecto.</li>
+  <li>Aplicar el patrón de permisos por objeto y registrar auditoría de cambios de notas.</li>
+  <li>Revisar otros endpoints por IDOR y agregar pruebas automáticas de autorización (casos positivos y negativos).</li>
+</ul>
+<h3>6.3 Criterios de aceptación</h3>
+<ul>
+  <li>[ ] El superusuario ya no usa credenciales por defecto.</li>
+  <li>[ ] <code>DEBUG=False</code> en producción (las URLs ya no se listan ante un 404).</li>
+  <li>[ ] Un docente no puede modificar notas de materias/alumnos fuera de su asignación (recibe 403).</li>
+  <li>[ ] Se agregaron pruebas de regresión de autorización.</li>
+</ul>
+<p><strong>Responsable sugerido:</strong> equipo de desarrollo backend / plataforma.<br>
+<strong>Fecha objetivo:</strong> inmediata (riesgo crítico).</p>
+
+<h2>7. Validación posterior y seguimiento</h2>
+<table>
+  <tr><th>Fecha</th><th>Responsable</th><th>Acción</th><th>Resultado</th></tr>
+  <tr><td>2026-11-11</td><td>Sofía Lourdes Toledo Criado</td><td>Explotación y verificación en laboratorio</td><td>Confirmado (nota alterada a 9,00)</td></tr>
+  <tr><td>[AAAA-MM-DD]</td><td>[Equipo backend]</td><td>Retest tras remediación</td><td>Pendiente</td></tr>
+</table>
+<p><strong>Estado final:</strong> Abierto (remediación pendiente del lado del servidor).<br>
+<strong>Observaciones:</strong> hallazgo resuelto como challenge; el reporte documenta causa raíz y remediación para un escenario real equivalente.</p>
+
+<footer>
+  Curso Software Seguro — Módulo VI, Objetivo 3. Documento confidencial de uso académico autorizado.
+  Pruebas realizadas exclusivamente sobre el entorno de laboratorio provisto por la cátedra, con datos ficticios.
+</footer>
+
+</body>
+</html>

